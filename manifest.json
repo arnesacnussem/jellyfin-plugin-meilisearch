@@ -1,45 +1,12 @@
 [
-  {
-    "guid": "974395db-b31d-46a2-bc86-ef9aa5ac04dd",
-    "name": "Meilisearch",
-    "description": "Allow search query though external Meilisearch server, to speed up search and improve search result",
-    "overview": "Use Meilisearch to enhance the search experience",
-    "owner": "a.sac",
-    "category": "Metadata",
-    "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
-    "versions": [
-      {
-        "version": "1.8.1.0",
-        "changelog": "add more info to the status",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/v1.8.1.0/meilisearch_1.8.1.0.zip",
-        "checksum": "0f53dd2e2cb6912e66722f78cbf3a73d",
-        "timestamp": "2024-11-17T03:10:28Z"
-      },
-      {
-        "version": "1.7.0.0",
-        "changelog": "remove sortName as it definitely does not help",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/v1.7.0.0/meilisearch_1.7.0.0.zip",
-        "checksum": "3d5dc6fcc1d1d71844c8b899d3e8c2e4",
-        "timestamp": "2024-11-07T03:10:28Z"
-      },
-      {
-        "version": "1.3.0.0",
-        "changelog": "fix config reloading and index name",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/v1.3.0.0/meilisearch-plugin_1.3.0.0.zip",
-        "checksum": "3a502b599e86588ab82b34a013691da1",
-        "timestamp": "2024-11-06T03:09:28Z"
-      },
-      {
-        "version": "1.0.0.0",
-        "changelog": "先凑合用吧. At least, it works",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/v1.0.0.0/meilisearch-plugin_1.0.0.0.zip",
-        "checksum": "6a4f57118529e808bba0f800a2891a31",
-        "timestamp": "2024-11-06T00:09:28Z"
-      }
-    ]
-  }
+    {
+        "guid": "974395db-b31d-46a2-bc86-ef9aa5ac04dd",
+        "name": "Meilisearch",
+        "description": "This is a plugin that try to use Meilisearch to speedup the search of jellyfin. Inspired by Jellysearch\n",
+        "overview": "A Meilisearch Plugin for Jellyfin",
+        "owner": "a.sac.",
+        "category": "General",
+        "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
+        "versions": []
+    }
 ]
