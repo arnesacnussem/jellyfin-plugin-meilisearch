@@ -7,6 +7,15 @@
         "owner": "a.sac.",
         "category": "General",
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
-        "versions": []
+        "versions": [
+            {
+                "version": "1.10.0.0",
+                "changelog": "- [d6a403b] is that me or AI use a wrong var in ci script?\n- [5626dd3] add index task",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.0.0/meilisearch_1.10.0.0.zip",
+                "checksum": "5c491115e5bc872b6251736a231f46da",
+                "timestamp": "2024-11-18T11:41:51Z"
+            }
+        ]
     }
 ]
