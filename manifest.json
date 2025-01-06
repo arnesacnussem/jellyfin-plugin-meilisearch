@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.10.1.1",
+                "changelog": "- [b86aaac] add a workaround for #5",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.1.1/meilisearch_1.10.1.1.zip",
+                "checksum": "8c3b3f93ad6e37ddddfd575a6fea57c0",
+                "timestamp": "2025-01-06T06:29:01Z"
+            },
+            {
                 "version": "1.10.1.0",
                 "changelog": "- [1bc36b1] this should fix the `unknown` status",
                 "targetAbi": "10.9.0.0",
