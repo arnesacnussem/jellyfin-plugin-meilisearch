@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.10.2.0",
+                "changelog": "- [a02c50e] fix #11: Fallback option is not really working, now we return an empty result we created ourselves\n- [85a0ec7] Update README.md",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.2.0/meilisearch_1.10.2.0.zip",
+                "checksum": "87a62d9c72b472dce103475ab3634e2b",
+                "timestamp": "2025-02-19T12:01:36Z"
+            },
+            {
                 "version": "1.10.1.1",
                 "changelog": "- [b86aaac] add a workaround for #5",
                 "targetAbi": "10.9.0.0",
