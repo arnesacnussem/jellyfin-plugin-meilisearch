@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.10.2.2",
+                "changelog": "- [7e72620] #16 replace all index lookup with TryGetValue\n- [567ee5d] keep a copy of empty result as it never changes",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.2.2/meilisearch_1.10.2.2.zip",
+                "checksum": "9015c6b5cd32fbc952820dc3c5617ae1",
+                "timestamp": "2025-03-13T19:14:28Z"
+            },
+            {
                 "version": "1.10.2.1",
                 "changelog": "- [1bd5ef8] fix what I've missed previously",
                 "targetAbi": "10.9.0.0",
