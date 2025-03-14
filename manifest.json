@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.10.3.0",
+                "changelog": "- [05d4147] #17 ability to reconnect\n- [b4a48eb] add `type` to displayed attributes\n- [ccb77f4] #16 search multiple times when one query have more than one `includeItemTypes`",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.3.0/meilisearch_1.10.3.0.zip",
+                "checksum": "9af78f832fd3f886d7854566d68945e7",
+                "timestamp": "2025-03-14T18:33:48Z"
+            },
+            {
                 "version": "1.10.2.2",
                 "changelog": "- [7e72620] #16 replace all index lookup with TryGetValue\n- [567ee5d] keep a copy of empty result as it never changes",
                 "targetAbi": "10.9.0.0",
