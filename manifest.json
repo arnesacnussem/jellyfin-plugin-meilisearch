@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.10.3.2",
+                "changelog": "- [6f4cdc4] #19 only apply limit when no item returned or one type being searched\n- [9376730] add description for the install-plugin folder",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.10.3.2/meilisearch_1.10.3.2.zip",
+                "checksum": "e2ef99373fecc5d0153ca2cf5fe1e8c8",
+                "timestamp": "2025-04-26T16:09:53Z"
+            },
+            {
                 "version": "1.10.3.1",
                 "changelog": "- [52a5845] Cleanup config controller",
                 "targetAbi": "10.9.0.0",
