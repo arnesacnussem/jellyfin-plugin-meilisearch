@@ -1,0 +1,1 @@
+﻿here just some helper script for me to run this thing locally for testing
