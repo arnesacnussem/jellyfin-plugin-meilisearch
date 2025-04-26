@@ -171,7 +171,7 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
             limitObj = null;
         var limit = (int?)limitObj ?? 20;
         var filter = filteredTypes
-            .Select(it => new KeyValuePair<string, string>("type", it));
+            .Select(it => new KeyValuePair<string, string>("type", it)).ToList();
         var items = await Search(ch.Index, searchTerm, filter, additionalFilters, limit);
 
         var notFallback = !(Plugin.Instance?.Configuration.FallbackToJellyfin ?? false);
@@ -188,7 +188,7 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
             context.ActionArguments["ids"] = items.Select(x => Guid.Parse(x.Guid)).ToArray();
             if (items.Count == 0)
                 context.ActionArguments["limit"] = 0;
-            else
+            else if (filter.Count == 1)
                 context.ActionArguments["limit"] = limit < 20 ? 20 : limit;
         }
         else
