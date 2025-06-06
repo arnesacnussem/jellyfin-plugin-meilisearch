@@ -1,7 +1,4 @@
 # Meilisearch Plugin for Jellyfin
-> [!CAUTION]
-> The search may return results from libraries that the user is not authorised to view. Search results are not checked for user permissions. see [#13](https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/issues/13)
-
 
 A plugin for Jellyfin that try to improves search speed and result by utilize Meilisearch as search engine.
 
