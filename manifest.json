@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.0.0",
+                "changelog": "- [658d314] add an option to the permission thing, but I'm not sure anyone will need this :)\n- [2400583] remove items that are not visible to the user (#29)\n- [27b2719] #19 only apply limit when no item returned or one type being searched\n- [3c92407] add description for the install-plugin folder\n- [b1a106a] Merge pull request #20 from jumoog/main\n- [37f4f09] Update README.md\n- [585afde] add a warning to the readme",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.0.0/meilisearch_1.11.0.0.zip",
+                "checksum": "051556a41474122e703ce389f28a5aef",
+                "timestamp": "2025-06-06T16:46:29Z"
+            },
+            {
                 "version": "1.10.3.2",
                 "changelog": "- [6f4cdc4] #19 only apply limit when no item returned or one type being searched\n- [9376730] add description for the install-plugin folder",
                 "targetAbi": "10.9.0.0",
