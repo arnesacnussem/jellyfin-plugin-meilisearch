@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Querying;
 using Meilisearch;
@@ -15,7 +16,7 @@ using Index = Meilisearch.Index;
 namespace Jellyfin.Plugin.Meilisearch;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<MeilisearchMutateFilter> logger)
+public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<MeilisearchMutateFilter> logger, ILibraryManager libraryManager, IUserManager userManager)
     : IAsyncActionFilter
 {
     private static readonly Dictionary<string, string> JellyfinTypeMap = new()
@@ -87,7 +88,7 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
         try
         {
             var additionQuery = additionalFilters.Select(it => $"{it.Key} = {it.Value}").ToList();
-            foreach (var query in filters.Select(it => (List<string>) [$"{it.Key} = {it.Value}"]))
+            foreach (var query in filters.Select(it => (List<string>)[$"{it.Key} = {it.Value}"]))
             {
                 var results = await index.SearchAsync<MeilisearchItem>(
                     searchTerm,
@@ -166,6 +167,17 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
             }
         }
 
+        // get user Id
+        if (!context.ActionArguments.TryGetValue("userId", out var userIdObj))
+            userIdObj = null;
+
+        var user = userIdObj switch
+        {
+            string strUserId => userManager.GetUserById(Guid.Parse(strUserId)),
+            Guid guidUserId => userManager.GetUserById(guidUserId),
+            _ => null
+        };
+
         // Override the limit if it is less than 20 from request
         if (context.ActionArguments.TryGetValue("limit", out var limitObj))
             limitObj = null;
@@ -183,8 +195,8 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
             // Remove sortby and sortorder since we want to display results as Meilisearch returns them
             // Remove limit since we are requesting by specific IDs and don't want Jellyfin to remove some of them
             context.ActionArguments["searchTerm"] = null;
-            context.ActionArguments["sortBy"] = (ItemSortBy[]) [];
-            context.ActionArguments["sortOrder"] = (SortOrder[]) [];
+            context.ActionArguments["sortBy"] = (ItemSortBy[])[];
+            context.ActionArguments["sortOrder"] = (SortOrder[])[];
             context.ActionArguments["ids"] = items.Select(x => Guid.Parse(x.Guid)).ToArray();
             if (items.Count == 0)
                 context.ActionArguments["limit"] = 0;
@@ -194,6 +206,16 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
         else
         {
             logger.LogDebug("Not mutate request: results={hits}, fallback={fallback}", items.Count, !notFallback);
+        }
+
+        // remove items that are not visible to the user
+        if (user != null)
+        {
+            items = [.. items.Where(x => 
+            {
+                var item = libraryManager.GetItemById(Guid.Parse(x.Guid));
+                return item?.IsVisibleStandalone(user) ?? false;
+            })];
         }
 
         return new MutateResult(notFallback, items.Count);
