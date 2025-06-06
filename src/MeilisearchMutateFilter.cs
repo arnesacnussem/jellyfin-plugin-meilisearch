@@ -16,7 +16,7 @@ using Index = Meilisearch.Index;
 namespace Jellyfin.Plugin.Meilisearch;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<MeilisearchMutateFilter> logger, ILibraryManager libraryManager, IUserManager userManager)
+public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<MeilisearchMutateFilter> logger, IUserManager userManager)
     : IAsyncActionFilter
 {
     private static readonly Dictionary<string, string> JellyfinTypeMap = new()
@@ -178,6 +178,12 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
             _ => null
         };
 
+        // Add user ID to filter if a user is present
+        if (user != null)
+        {
+            additionalFilters.Add(new KeyValuePair<string, string>("allowedUserIds", user.Id.ToString()));
+        }
+
         // Override the limit if it is less than 20 from request
         if (context.ActionArguments.TryGetValue("limit", out var limitObj))
             limitObj = null;
@@ -206,16 +212,6 @@ public class MeilisearchMutateFilter(MeilisearchClientHolder ch, ILogger<Meilise
         else
         {
             logger.LogDebug("Not mutate request: results={hits}, fallback={fallback}", items.Count, !notFallback);
-        }
-
-        // remove items that are not visible to the user
-        if (user != null)
-        {
-            items = [.. items.Where(x => 
-            {
-                var item = libraryManager.GetItemById(Guid.Parse(x.Guid));
-                return item?.IsVisibleStandalone(user) ?? false;
-            })];
         }
 
         return new MutateResult(notFallback, items.Count);

@@ -70,7 +70,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         var index = meilisearch.Index(configName.IsNullOrEmpty() ? sanitizedConfigName : configName);
 
         await index.UpdateFilterableAttributesAsync(
-            ["type", "parentId", "isFolder"]
+            ["type", "parentId", "isFolder", "allowedUserIds"]
         );
 
         await index.UpdateSortableAttributesAsync(
