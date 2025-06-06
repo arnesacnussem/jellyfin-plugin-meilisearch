@@ -1,5 +1,4 @@
-﻿using MediaBrowser.Controller.Library;
-using Meilisearch;
+﻿using Meilisearch;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Index = Meilisearch.Index;
@@ -9,10 +8,8 @@ namespace Jellyfin.Plugin.Meilisearch;
 /**
  * Following code is somewhat copy-pasted or adapted from Jellysearch.
  */
-public class DbIndexer(MeilisearchClientHolder clientHolder, ILogger<DbIndexer> logger, IUserManager userManager, ILibraryManager libraryManager) : Indexer(clientHolder, logger)
+public class DbIndexer(MeilisearchClientHolder clientHolder, ILogger<DbIndexer> logger) : Indexer(clientHolder, logger)
 {
-    private readonly IUserManager _userManager = userManager;
-    private readonly ILibraryManager _libraryManager = libraryManager;
     // private readonly string[] _bitField = ["IsFolder"];
     //
     // private readonly string[] _floatField = ["CommunityRating", "CriticRating"];
@@ -65,17 +62,6 @@ public class DbIndexer(MeilisearchClientHolder clientHolder, ILogger<DbIndexer> 
         var items = new List<MeilisearchItem>();
         while (await reader.ReadAsync())
         {
-            var baseItem = _libraryManager.GetItemById(reader.GetGuid(0));
-            var allowedUsers = new List<string>();
-            
-            foreach(var user in _userManager.Users)
-            {
-                if(baseItem?.IsVisibleStandalone(user) ?? false)
-                {
-                    allowedUsers.Add(user.Id.ToString());
-                }
-            }
-
             var item = new MeilisearchItem(
                 reader.GetGuid(0).ToString(),
                 !reader.IsDBNull(1) ? reader.GetString(1) : null,
@@ -93,8 +79,7 @@ public class DbIndexer(MeilisearchClientHolder clientHolder, ILogger<DbIndexer> 
                 SeriesName: !reader.IsDBNull(13) ? reader.GetString(13) : null,
                 Artists: !reader.IsDBNull(14) ? reader.GetString(14).Split('|') : null,
                 AlbumArtists: !reader.IsDBNull(15) ? reader.GetString(15).Split('|') : null,
-                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null,
-                AllowedUserIds: allowedUsers.ToArray()
+                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null
             );
             if (item.Path?[0] == '%') item = item with { Path = null };
             items.Add(item);

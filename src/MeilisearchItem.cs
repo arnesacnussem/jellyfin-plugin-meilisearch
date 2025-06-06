@@ -17,6 +17,5 @@ public record MeilisearchItem(
     bool? IsFolder,
     double? CommunityRating,
     double? CriticRating,
-    string? Path,
-    string[]? AllowedUserIds
+    string? Path
 );
