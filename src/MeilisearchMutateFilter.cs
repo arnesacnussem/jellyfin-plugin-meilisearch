@@ -137,16 +137,65 @@ public class MeilisearchMutateFilter(
             return new MutateResult(false, 0);
         }
 
-        if (!context.ActionArguments.TryGetValue("includeItemTypes", out var includeItemTypesObj))
-            includeItemTypesObj = null;
-        var includeItemTypes = (BaseItemKind[]?)includeItemTypesObj ?? [];
         var filteredTypes = new List<string>();
         var additionalFilters = new List<KeyValuePair<string, string>>();
-        if (!includeItemTypes.IsNullOrEmpty())
+        
+        // includeItemTypes add types from the search
+        if (context.HttpContext.Request.Query.TryGetValue("includeItemTypes", out var includeItemTypes))
         {
-            // Get item type(s) from URL
-            var itemTypes = includeItemTypes.Select(x => JellyfinTypeMap[x.ToString()]).ToList();
-            filteredTypes.AddRange(itemTypes);
+            // If excludeItemTypes is set, we only search for those types
+            if (includeItemTypes.Count > 0)
+            {
+                foreach (var x in includeItemTypes)
+                {
+                    if (x != null && JellyfinTypeMap.TryGetValue(x, out var includeItemType))
+                    {
+                        filteredTypes.Add(includeItemType);
+                    }
+                    else
+                    {
+                        logger.LogWarning("includeItemTypes: no mapping for '{mediaType}'", x);
+                    }
+                }
+            }
+        }
+        // excludeItemTypes removes types from the search
+        if (context.HttpContext.Request.Query.TryGetValue("excludeItemTypes", out var excludeItemTypes))
+        {
+            // If excludeItemTypes is set, we only search for those types
+            if (excludeItemTypes.Count > 0)
+            {
+                foreach (var x in excludeItemTypes)
+                {
+                    if (x != null && JellyfinTypeMap.TryGetValue(x, out var excludeItemType))
+                    {
+                        filteredTypes.Remove(excludeItemType);
+                    }
+                    else
+                    {
+                        logger.LogWarning("excludeItemTypes: no mapping for '{mediaType}'", x);
+                    }
+                }
+            }
+        }
+        // else if querry has mediaTypes use those to filter
+        if (context.HttpContext.Request.Query.TryGetValue("mediaTypes", out var mediaTypes) )
+        {
+            // If mediaTypes is set, we only search for those types
+            if (mediaTypes.Count > 0)
+            {
+                foreach (var x in mediaTypes)
+                {
+                    if (x != null && JellyfinTypeMap.TryGetValue(x, out var mappedType))
+                    {
+                        filteredTypes.Add(mappedType);
+                    }
+                    else
+                    {
+                        logger.LogWarning("mediaTypes: no mapping for '{mediaType}'", x);
+                    }
+                }
+            }
         }
         else
         {
