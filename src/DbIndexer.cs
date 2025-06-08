@@ -56,7 +56,7 @@ public class DbIndexer(MeilisearchClientHolder clientHolder, ILogger<DbIndexer> 
         // Query all base items
         await using var command = connection.CreateCommand();
         command.CommandText =
-            "SELECT guid, type, ParentId, CommunityRating, Name, Overview, ProductionYear, Genres, Studios, Tags, IsFolder, CriticRating, OriginalTitle, SeriesName, Artists, AlbumArtists, Path FROM TypedBaseItems";
+            "SELECT Id, Type, ParentId, CommunityRating, Name, Overview, ProductionYear, Genres, Studios, Tags, IsFolder, CriticRating, OriginalTitle, SeriesName, Artists, AlbumArtists, Path FROM BaseItems";
 
         await using var reader = await command.ExecuteReaderAsync();
         var items = new List<MeilisearchItem>();

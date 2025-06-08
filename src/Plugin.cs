@@ -34,7 +34,7 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
         _clientHolder = clientHolder;
         Indexer = indexer;
 
-        DbPath = Path.Combine(applicationPaths.DataPath, "library.db");
+        DbPath = Path.Combine(applicationPaths.DataPath, "jellyfin.db");
         logger.LogInformation("db_path={DB}", DbPath);
         Instance = this;
 
