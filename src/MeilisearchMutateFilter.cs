@@ -139,55 +139,46 @@ public class MeilisearchMutateFilter(
 
         var filteredTypes = new List<string>();
         var additionalFilters = new List<KeyValuePair<string, string>>();
-        
+
         // includeItemTypes add types from the search
-        var includeItemTypes = context.HttpContext.Request.Query["includeItemTypes"];
-        if (!StringValues.IsNullOrEmpty(includeItemTypes))
+        var includeItemTypes = ParseQueryCommaOrMulti(context, "includeItemTypes");
+        logger.LogDebug("includeItemTypes={includeItemTypes}", string.Join(", ", includeItemTypes));
+        foreach (var x in includeItemTypes)
         {
-            // If includeItemTypes is set, we only search for those types
-            var types = includeItemTypes.SelectMany(x => x?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
-            logger.LogDebug("includeItemTypes={includeItemTypes}", string.Join(", ", types));
-            foreach (var x in types)
+            if (JellyfinTypeMap.TryGetValue(x, out var type))
             {
-                if (x != null && JellyfinTypeMap.TryGetValue(x, out var includeItemType))
-                {
-                    filteredTypes.Add(includeItemType);
-                }
-                else
-                {
-                    logger.LogWarning("includeItemTypes: no mapping for '{mediaType}'", x);
-                }
+                filteredTypes.Add(type);
+            }
+            else
+            {
+                logger.LogWarning("includeItemTypes: no mapping for '{mediaType}'", x);
             }
         }
+
         // excludeItemTypes remove types from the search
-        var excludeItemTypes = context.HttpContext.Request.Query["excludeItemTypes"];
-        if (!StringValues.IsNullOrEmpty(excludeItemTypes))
+        var excludeItemTypes = ParseQueryCommaOrMulti(context, "excludeItemTypes");
+        logger.LogDebug("excludeItemTypes={excludeItemTypes}", string.Join(", ", excludeItemTypes));
+        foreach (var x in excludeItemTypes)
         {
-            // If includeItemTypes is set, we only search for those types
-            var types = excludeItemTypes.SelectMany(x => x?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
-            logger.LogDebug("excludeItemTypes={excludeItemTypes}", string.Join(", ", types));
-            foreach (var x in types)
+            if (JellyfinTypeMap.TryGetValue(x, out var excludeItemType))
             {
-                if (x != null && JellyfinTypeMap.TryGetValue(x, out var excludeItemType))
-                {
-                    filteredTypes.Remove(excludeItemType);
-                }
-                else
-                {
-                    logger.LogWarning("excludeItemTypes: no mapping for '{mediaType}'", x);
-                }
+                filteredTypes.Remove(excludeItemType);
+            }
+            else
+            {
+                logger.LogWarning("excludeItemTypes: no mapping for '{mediaType}'", x);
             }
         }
+
         // mediaTypes add types from the search
-        var mediaTypes = context.HttpContext.Request.Query["mediaTypes"];
-        if (!StringValues.IsNullOrEmpty(mediaTypes))
+        var mediaTypes = ParseQueryCommaOrMulti(context, "mediaTypes");
+        logger.LogDebug("mediaTypes={mediaTypes}", string.Join(", ", mediaTypes));
+        if (!mediaTypes.IsNullOrEmpty())
         {
             // If mediaTypes is set, we only search for those types
-            var types = mediaTypes.SelectMany(x => x?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
-            logger.LogDebug("mediaTypes={mediaTypes}", string.Join(", ", types));
-            foreach (var x in types)
+            foreach (var x in mediaTypes)
             {
-                if (x != null && JellyfinTypeMap.TryGetValue(x, out var mappedType))
+                if (JellyfinTypeMap.TryGetValue(x, out var mappedType))
                 {
                     filteredTypes.Add(mappedType);
                 }
@@ -259,8 +250,8 @@ public class MeilisearchMutateFilter(
             // Remove sortby and sortorder since we want to display results as Meilisearch returns them
             // Remove limit since we are requesting by specific IDs and don't want Jellyfin to remove some of them
             context.ActionArguments["searchTerm"] = null;
-            context.ActionArguments["sortBy"] = (ItemSortBy[])[];
-            context.ActionArguments["sortOrder"] = (SortOrder[])[];
+            context.ActionArguments["sortBy"] = (ItemSortBy[]) [];
+            context.ActionArguments["sortOrder"] = (SortOrder[]) [];
             context.ActionArguments["ids"] = items.Select(x => Guid.Parse(x.Guid)).ToArray();
             if (items.Count == 0)
                 context.ActionArguments["limit"] = 0;
@@ -283,4 +274,21 @@ public class MeilisearchMutateFilter(
         TotalRecordCount = 0,
         StartIndex = 0
     });
+
+
+    /// <summary>
+    /// Parse a query parameter that may contain comma delimited values or multiple values.
+    /// </summary>
+    /// <param name="context">The HttpContext extension.</param>
+    /// <param name="key">The query parameter name.</param>
+    /// <returns>The list of values.</returns>
+    private static ImmutableList<string> ParseQueryCommaOrMulti(ActionExecutingContext context, string key)
+    {
+        if (!context.HttpContext.Request.Query.TryGetValue(key, out var values) || StringValues.IsNullOrEmpty(values))
+            return ImmutableList<string>.Empty; // no values
+        var types = values.SelectMany(it =>
+            it?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
+        return types.ToImmutableList();
+
+    }
 }
