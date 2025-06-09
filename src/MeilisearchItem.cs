@@ -15,7 +15,7 @@ public record MeilisearchItem(
     string[]? Studios,
     string[]? Tags,
     bool? IsFolder,
-    float? CommunityRating,
-    float? CriticRating,
+    double? CommunityRating,
+    double? CriticRating,
     string? Path
 );
