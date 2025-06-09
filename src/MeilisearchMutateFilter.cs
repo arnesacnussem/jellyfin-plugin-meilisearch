@@ -249,7 +249,9 @@ public class MeilisearchMutateFilter(
             // Remove searchterm since we already searched
             // Remove sortby and sortorder since we want to display results as Meilisearch returns them
             // Remove limit since we are requesting by specific IDs and don't want Jellyfin to remove some of them
+            // Remove isMissing since we serve all items, not just missing ones
             context.ActionArguments["searchTerm"] = null;
+            context.ActionArguments["isMissing"] = null;
             context.ActionArguments["sortBy"] = (ItemSortBy[]) [];
             context.ActionArguments["sortOrder"] = (SortOrder[]) [];
             context.ActionArguments["ids"] = items.Select(x => Guid.Parse(x.Guid)).ToArray();
