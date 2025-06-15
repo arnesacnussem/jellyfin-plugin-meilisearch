@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.2",
+                "changelog": "- [7ded0c9] ci(deps): bump actions/download-artifact from 4.1.8 to 4.3.0 (#41)\n- [34808a9] ci(deps): bump ncipollo/release-action from 1.14.0 to 1.16.0 (#40)\n- [f8be725] ci(deps): bump actions/checkout from 4.1.7 to 4.2.2 (#39)\n- [7dcd91c] ci(deps): bump actions/upload-artifact from 4.4.0 to 4.6.2 (#38)\n- [11b9b47] ci(deps): bump actions/setup-dotnet from 4.0.1 to 4.3.1 (#37)\n- [d94a182] CI: add dependabot for updates\n- [afb9645] remove isMissing since we serve all items, not just missing ones (#36)\n- [6fef6bb] CommunityRating & CriticRating is a float (#35)",
+                "targetAbi": "10.9.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.2/meilisearch_1.11.1.2.zip",
+                "checksum": "bc044d4412f1da63f3ebeabea8818e46",
+                "timestamp": "2025-06-15T12:00:43Z"
+            },
+            {
                 "version": "1.11.1.1",
                 "changelog": "- [ebb4d8b] refactor: streamline query parameter handling and add parsing utility\n- [327d8b3] search: look for multiple and multiple comma delimited",
                 "targetAbi": "10.9.0.0",
