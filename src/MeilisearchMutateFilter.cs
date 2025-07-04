@@ -125,22 +125,27 @@ public class MeilisearchMutateFilter(
     }
 
 
-    private async Task<IReadOnlyCollection<MeilisearchItem>> Search(Index index, string searchTerm,
-        IEnumerable<KeyValuePair<string, string>> filters, List<KeyValuePair<string, string>> additionalFilters,
-        int limit = 20)
+    private async Task<IReadOnlyCollection<MeilisearchItem>> Search(
+        Index index,
+        string searchTerm,
+        List<string> itemTypes,
+        List<KeyValuePair<string, string>> additionalFilters,
+        int limitPerType
+    )
     {
         List<MeilisearchItem> items = [];
         try
         {
             var additionQuery = additionalFilters.Select(it => $"{it.Key} = {it.Value}").ToList();
-            foreach (var query in filters.Select(it => (List<string>) [$"{it.Key} = {it.Value}"]))
+            var additionQueryStr = additionQuery.Count > 0 ? $" AND {string.Join(" AND ", additionQuery)}" : "";
+            foreach (var itemType in itemTypes)
             {
                 var results = await index.SearchAsync<MeilisearchItem>(
                     searchTerm,
                     new SearchQuery
                     {
-                        Filter = string.Join(" AND ", query.Concat(additionQuery)),
-                        Limit = limit,
+                        Filter = $"type = \"{itemType}\" {additionQueryStr}",
+                        Limit = limitPerType,
                         AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
                     }
                 );
@@ -224,13 +229,11 @@ public class MeilisearchMutateFilter(
             }
         }
 
-        // Set limit to 20 if not set
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
-            : 20;
-        var filter = filteredTypes
-            .Select(it => new KeyValuePair<string, string>("type", it)).ToList();
-        var meilisearchItems = await Search(ch.Index, searchTerm, filter, additionalFilters, limit);
+            : 0;
+        var limitPreItem = Math.Clamp(limit / filteredTypes.Count, 30, 100);
+        var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limitPreItem);
 
         // remove items that are not visible to the user
         var items = meilisearchItems.Select(it =>
