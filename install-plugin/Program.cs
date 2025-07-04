@@ -1,7 +1,7 @@
 ﻿using System.Text;
 
 Console.OutputEncoding = Encoding.UTF8;
-var buildPath = Path.GetFullPath("src/bin/Debug/net8.0/publish");
+var buildPath = Path.GetFullPath("src/bin/Debug/publish");
 var pluginPath = Path.GetFullPath("jellyfin/data/plugins/Meilisearch");
 var files = new[]
 {
