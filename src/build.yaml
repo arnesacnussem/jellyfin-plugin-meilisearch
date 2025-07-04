@@ -2,8 +2,8 @@
 name: "Meilisearch"
 guid: "974395db-b31d-46a2-bc86-ef9aa5ac04dd"
 version: "0.0.0.0"
-targetAbi: "10.9.0.0"
-framework: "net8.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
 overview: "A Meilisearch Plugin for Jellyfin"
 imageUrl: https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg
 description: >
