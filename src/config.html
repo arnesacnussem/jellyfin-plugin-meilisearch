@@ -49,16 +49,6 @@
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
-                        <input id="CheckPermissions" is="emby-checkbox" name="CheckPermissions" type="checkbox"/>
-                        <span>Enable Permission Control to Search Result</span>
-                    </label>
-                    <div class="fieldDescription checkboxFieldDescription">
-                        When enabled, users can only see the result they have permission to access. It may have
-                        performance impact if you have a large number of users or a large number of items.
-                    </div>
-                </div>
-                <div class="checkboxContainer checkboxContainer-withDescription">
-                    <label class="emby-checkbox-label">
                         <input id="Debug" is="emby-checkbox" name="Debug" type="checkbox"/>
                         <span>Debug Output</span>
                     </label>
@@ -220,7 +210,6 @@
                         document.querySelector('#Debug').checked = config.Debug;
                         document.querySelector('#IndexName').value = config.IndexName;
                         document.querySelector('#Fallback').checked = config.FallbackToJellyfin;
-                        document.querySelector('#CheckPermissions').checked = !config.DisablePermissionChecks;
                         generateCheckboxList(config.AttributesToSearchOn)
                         Dashboard.hideLoadingMsg();
                     });
@@ -237,7 +226,6 @@
                         config.IndexName = document.querySelector('#IndexName').value;
                         config.AttributesToSearchOn = getSelectedSearchableFields();
                         config.FallbackToJellyfin = document.querySelector('#Fallback').checked;
-                        config.DisablePermissionChecks = !document.querySelector('#CheckPermissions').checked;
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });
