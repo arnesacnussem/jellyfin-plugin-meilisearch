@@ -1,5 +1,4 @@
-﻿using Jellyfin.Data.Enums;
-using MediaBrowser.Controller.Channels;
+﻿using MediaBrowser.Controller.Channels;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
@@ -20,6 +19,13 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using Jellyfin.Data;
+using Jellyfin.Database.Implementations.Entities;
+using Jellyfin.Database.Implementations.Enums;
+using Jellyfin.Extensions;
+using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Net;
+using MediaBrowser.Model.Entities;
 using Index = Meilisearch.Index;
 
 namespace Jellyfin.Plugin.Meilisearch;
@@ -29,8 +35,9 @@ public class MeilisearchMutateFilter(
     MeilisearchClientHolder ch,
     ILogger<MeilisearchMutateFilter> logger,
     ILibraryManager libraryManager,
-    IUserManager userManager)
-    : IAsyncActionFilter
+    IUserManager userManager,
+    IDtoService dtoService
+) : IAsyncActionFilter
 {
     // Build the Jellyfin type map dynamically
     private IReadOnlyDictionary<string, string> JellyfinTypeMap { get; } = new Dictionary<string, string>()
@@ -70,29 +77,46 @@ public class MeilisearchMutateFilter(
         { "Year", typeof(Year).FullName! }
     }.ToFrozenDictionary();
 
-    private static readonly Collection<string> MatchingPaths = ["/Items"];
-    // ["/Users/{userId}/Items", "/Persons", "/Artists/AlbumArtists", "/Artists", "/Genres"];
-
+    /// <summary>
+    /// check if the user is api key https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Extensions/ClaimsPrincipalExtensions.cs #GetIsApiKey
+    /// </summary>
+    /// <param name="context">The action context</param>
+    /// <param name="next">The action execution delegate</param>
+    /// <returns>bool if the user is api-key</returns>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        if (context.GetIsApiKey())
+        {
+            // we not handle the request if user is authenticated by api key
+            await next();
+            return;
+        }
+
+        var user = context.GetUser(userManager);
+        if (user is null)
+        {
+            // we not handle the request if user is null
+            await next();
+            return;
+        }
+
         var path = context.HttpContext.Request.Path.ToString();
         logger.LogDebug("path={path} query={query}", path, context.HttpContext.Request.QueryString);
 
-        var searchTerm = GetSearchTerm(context);
+        var searchTerm = context.GetSearchTerm();
         if (!string.IsNullOrEmpty(searchTerm))
         {
             logger.LogDebug("path={path} searchTerm={searchTerm}", path, searchTerm);
             var stopwatch = Stopwatch.StartNew();
-            var result = await Mutate(context, searchTerm);
+            var result = await Mutate(context, user, searchTerm);
             stopwatch.Stop();
             Plugin.Instance?.UpdateAverageSearchTime(stopwatch.ElapsedMilliseconds);
-            context.HttpContext.Response.Headers.Add(new KeyValuePair<string, StringValues>(
-                "x-meilisearch-result",
-                $"{stopwatch.ElapsedMilliseconds}ms, {result.Count} items, bypass={result.ShouldBypass}"));
 
-            if (result is { ShouldBypass: true, Count: 0 })
+            if (result.SkipNext)
             {
-                context.Result = EmptyResult;
+                context.HttpContext.Response.Headers.Add(new KeyValuePair<string, StringValues>(
+                    "x-meilisearch-result",
+                    $"{stopwatch.ElapsedMilliseconds}ms, count={result.Count}, skip={result.SkipNext}"));
                 return;
             }
         }
@@ -100,16 +124,6 @@ public class MeilisearchMutateFilter(
         await next();
     }
 
-    private string? GetSearchTerm(ActionExecutingContext context)
-    {
-        var path = context.HttpContext.Request.Path.ToString();
-        logger.LogDebug("path={path} query={query}", path, context.HttpContext.Request.QueryString);
-
-        if (!MatchingPaths.Contains(context.HttpContext.Request.Path)) return null;
-        if (!context.ActionArguments.TryGetValue("searchTerm", out var searchTermObj)) return null;
-        var searchTerm = (string?)searchTermObj;
-        return searchTerm is not { Length: > 0 } ? null : searchTerm;
-    }
 
     private async Task<IReadOnlyCollection<MeilisearchItem>> Search(Index index, string searchTerm,
         IEnumerable<KeyValuePair<string, string>> filters, List<KeyValuePair<string, string>> additionalFilters,
@@ -119,7 +133,7 @@ public class MeilisearchMutateFilter(
         try
         {
             var additionQuery = additionalFilters.Select(it => $"{it.Key} = {it.Value}").ToList();
-            foreach (var query in filters.Select(it => (List<string>)[$"{it.Key} = {it.Value}"]))
+            foreach (var query in filters.Select(it => (List<string>) [$"{it.Key} = {it.Value}"]))
             {
                 var results = await index.SearchAsync<MeilisearchItem>(
                     searchTerm,
@@ -145,15 +159,16 @@ public class MeilisearchMutateFilter(
 
     /// <summary>
     ///     Mutates the current search request context by overriding the ids with the results of the Meilisearch query.
-    ///     This part code is somewhat copied or adapted from Jellysearch.
+    ///     This part code now is somewhat copied or adapted from Jellysearch.
     /// </summary>
     /// <param name="context">The action context.</param>
+    /// <param name="user">User who doing the search</param>
     /// <param name="searchTerm">The search term.</param>
     /// <remarks>
     ///     If the search term is empty, or if there are no results, the method does nothing.
     /// </remarks>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task<MutateResult> Mutate(ActionExecutingContext context, string searchTerm)
+    private async Task<MutateResult> Mutate(ActionExecutingContext context, User user, string searchTerm)
     {
         if (!ch.Ok || ch.Index == null)
         {
@@ -167,52 +182,23 @@ public class MeilisearchMutateFilter(
         var additionalFilters = new List<KeyValuePair<string, string>>();
 
         // includeItemTypes add types from the search
-        var includeItemTypes = ParseQueryCommaOrMulti(context, "includeItemTypes");
+        var includeItemTypes = context.GetQueryCommaOrMulti("includeItemTypes");
         logger.LogDebug("includeItemTypes={includeItemTypes}", string.Join(", ", includeItemTypes));
-        foreach (var x in includeItemTypes)
-        {
-            if (JellyfinTypeMap.TryGetValue(x, out var type))
-            {
-                filteredTypes.Add(type);
-            }
-            else
-            {
-                logger.LogWarning("includeItemTypes: no mapping for '{mediaType}'", x);
-            }
-        }
+        filteredTypes.AddRange(ToJellyfinTypes(includeItemTypes));
 
         // excludeItemTypes remove types from the search
-        var excludeItemTypes = ParseQueryCommaOrMulti(context, "excludeItemTypes");
+        var excludeItemTypes = context.GetQueryCommaOrMulti("excludeItemTypes");
         logger.LogDebug("excludeItemTypes={excludeItemTypes}", string.Join(", ", excludeItemTypes));
-        foreach (var x in excludeItemTypes)
-        {
-            if (JellyfinTypeMap.TryGetValue(x, out var excludeItemType))
-            {
-                filteredTypes.Remove(excludeItemType);
-            }
-            else
-            {
-                logger.LogWarning("excludeItemTypes: no mapping for '{mediaType}'", x);
-            }
-        }
+        ToJellyfinTypes(excludeItemTypes).ToImmutableList().ForEach(it => filteredTypes.Remove(it));
+
 
         // mediaTypes add types from the search
-        var mediaTypes = ParseQueryCommaOrMulti(context, "mediaTypes");
+        var mediaTypes = context.GetQueryCommaOrMulti("mediaTypes");
         logger.LogDebug("mediaTypes={mediaTypes}", string.Join(", ", mediaTypes));
         if (!mediaTypes.IsNullOrEmpty())
         {
             // If mediaTypes is set, we only search for those types
-            foreach (var x in mediaTypes)
-            {
-                if (JellyfinTypeMap.TryGetValue(x, out var mappedType))
-                {
-                    filteredTypes.Add(mappedType);
-                }
-                else
-                {
-                    logger.LogWarning("mediaTypes: no mapping for '{mediaType}'", x);
-                }
-            }
+            filteredTypes.AddRange(ToJellyfinTypes(mediaTypes));
         }
         else
         {
@@ -238,75 +224,128 @@ public class MeilisearchMutateFilter(
             }
         }
 
-        // get user Id
-        if (!context.ActionArguments.TryGetValue("userId", out var userIdObj))
-            userIdObj = null;
-
-        // Use the Authorization header if there is no userId
-        // The userId query parameter is more important
-        userIdObj ??= context.HttpContext.User.Claims.FirstOrDefault(claim => claim.Type.Equals("Jellyfin-UserId", StringComparison.OrdinalIgnoreCase))?.Value;
-
-        var user = userIdObj switch
-        {
-            string strUserId => userManager.GetUserById(Guid.Parse(strUserId)),
-            Guid guidUserId => userManager.GetUserById(guidUserId),
-            _ => null
-        };
-
-        // Override the limit if it is less than 20 from request
-        if (context.ActionArguments.TryGetValue("limit", out var limitObj))
-            limitObj = null;
-        var limit = (int?)limitObj ?? 20;
+        // Set limit to 20 if not set
+        var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
+            ? (int)limitObj!
+            : 20;
         var filter = filteredTypes
             .Select(it => new KeyValuePair<string, string>("type", it)).ToList();
-        var items = await Search(ch.Index, searchTerm, filter, additionalFilters, limit);
+        var meilisearchItems = await Search(ch.Index, searchTerm, filter, additionalFilters, limit);
 
         // remove items that are not visible to the user
-        if (user != null && Plugin.Instance?.Configuration.DisablePermissionChecks != true)
+        var items = meilisearchItems.Select(it =>
         {
-            items = items.Where(x =>
-            {
-                var item = libraryManager.GetItemById(Guid.Parse(x.Guid));
-                return item?.IsVisibleStandalone(user) ?? false;
-            }).ToImmutableList();
-        }
+            var item = libraryManager.GetItemById(Guid.Parse(it.Guid));
+            return (item?.IsVisibleStandalone(user) ?? false) ? item : null;
+        }).Where(it => it is not null)!.ToImmutableList<BaseItem>();
+
 
         var notFallback = !(Plugin.Instance?.Configuration.FallbackToJellyfin ?? false);
         if (items.Count > 0 || notFallback)
         {
-            logger.LogDebug("Mutating search request with {hits} results", items.Count);
-            // Get all query arguments to pass along to Jellyfin
-            // Remove searchterm since we already searched
-            // Remove sortby and sortorder since we want to display results as Meilisearch returns them
-            // Remove limit since we are requesting by specific IDs and don't want Jellyfin to remove some of them
-            // Remove isMissing since we serve all items, not just missing ones
-            context.ActionArguments["searchTerm"] = null;
-            context.ActionArguments["isMissing"] = null;
-            context.ActionArguments["sortBy"] = (ItemSortBy[]) [];
-            context.ActionArguments["sortOrder"] = (SortOrder[]) [];
-            context.ActionArguments["ids"] = items.Select(x => Guid.Parse(x.Guid)).ToArray();
-            if (items.Count == 0)
-                context.ActionArguments["limit"] = 0;
-            else if (filter.Count == 1)
-                context.ActionArguments["limit"] = limit < 20 ? 20 : limit;
-        }
-        else
-        {
-            logger.LogDebug("Not mutate request: results={hits}, fallback={fallback}", items.Count, !notFallback);
+            SetQueryResult(context, user, items);
+            return new MutateResult(true, items.Count);
         }
 
+        logger.LogDebug("Not mutate request: results={hits}, fallback={fallback}", items.Count, !notFallback);
         return new MutateResult(notFallback, items.Count);
     }
 
-    private record MutateResult(bool ShouldBypass, int Count);
-
-    private static readonly OkObjectResult EmptyResult = new(new QueryResult<BaseItemDto>
+    private IEnumerable<string> ToJellyfinTypes(IEnumerable<string> types)
     {
-        Items = new List<BaseItemDto>(),
-        TotalRecordCount = 0,
-        StartIndex = 0
-    });
+        foreach (var type in types)
+        {
+            if (JellyfinTypeMap.TryGetValue(type, out var jellyfinType))
+            {
+                yield return jellyfinType;
+            }
+            else
+            {
+                logger.LogWarning("ToJellyfinTypes: no mapping for '{mediaType}'", type);
+            }
+        }
+    }
 
+    private record MutateResult(bool SkipNext, int Count);
+
+    private void SetQueryResult(ActionExecutingContext context, User user, ImmutableList<BaseItem> items)
+    {
+        var fields = context.ActionArguments.TryGetValue("fields", out var fieldsObj)
+            ? (ItemFields[])fieldsObj!
+            : [];
+        if (user.GetPreference(PreferenceKind.AllowedTags).Length != 0 && !fields.Contains(ItemFields.Tags))
+        {
+            fields = [..fields, ItemFields.Tags];
+        }
+
+        // ReSharper disable once SimplifyConditionalTernaryExpression for readability
+        var enableImages = context.ActionArguments.TryGetValue("enableImages", out var enableImagesObj)
+            ? (bool)enableImagesObj!
+            : true;
+        var enableUserData = context.ActionArguments.TryGetValue("enableUserData", out var enableUserDataObj)
+            ? (bool?)enableUserDataObj
+            : null;
+        var imageTypeLimit = context.ActionArguments.TryGetValue("imageTypeLimit", out var imageTypeLimitObj)
+            ? (int?)imageTypeLimitObj
+            : null;
+        var enableImageTypes = context.ActionArguments.TryGetValue("enableImageTypes", out var enableImageTypesObj)
+            ? (ImageType[])enableImageTypesObj!
+            : [];
+        var dtoOptions = new DtoOptions { Fields = fields }
+            .AddClientFields(context)
+            .AddAdditionalDtoOptions(enableImages, enableUserData, imageTypeLimit, enableImageTypes);
+        context.Result = new OkObjectResult(new QueryResult<BaseItemDto>
+        {
+            Items = dtoService.GetBaseItemDtos(items, dtoOptions),
+            TotalRecordCount = items.Count,
+            StartIndex = 0
+        });
+    }
+}
+
+public static class ActionExecutingContextExtensions
+{
+    public static string? GetUserClaimValue(this ActionExecutingContext context, string name) =>
+        context.HttpContext.User.Claims
+            .FirstOrDefault(claim => claim.Type.Equals(name, StringComparison.OrdinalIgnoreCase))?.Value;
+
+    public static bool GetIsApiKey(this ActionExecutingContext context) =>
+        bool.TryParse(context.GetUserClaimValue("Jellyfin-IsApiKey"), out var parsedClaimValue) && parsedClaimValue;
+
+    public static User? GetUser(this ActionExecutingContext context, IUserManager userManager)
+    {
+        var userId = context.ActionArguments.TryGetValue("userId", out var value) ? (Guid?)value : null;
+        var claimUserId = context.GetUserClaimValue("Jellyfin-UserId");
+        var claimUserGuid = string.IsNullOrEmpty(claimUserId) ? Guid.Empty : Guid.Parse(claimUserId);
+
+        // UserId not provided, fall back to authenticated user id.
+        if (userId.IsNullOrEmpty())
+        {
+            return userManager.GetUserById(claimUserGuid);
+        }
+
+        // User must be administrator to access another user.
+        var isAdministrator = context.HttpContext.User.IsInRole("Administrator");
+        if (!userId.Value.Equals(claimUserGuid) && !isAdministrator)
+        {
+            throw new SecurityException("Forbidden");
+        }
+
+        return userManager.GetUserById(userId.Value);
+    }
+
+    /// should be ["/Users/{userId}/Items", "/Persons", "/Artists/AlbumArtists", "/Artists", "/Genres"];
+    /// but now only /Items
+    private static readonly Collection<string> MatchingPaths = ["/Items"];
+
+
+    public static string? GetSearchTerm(this ActionExecutingContext context)
+    {
+        if (!MatchingPaths.Contains(context.HttpContext.Request.Path)) return null;
+        if (!context.ActionArguments.TryGetValue("searchTerm", out var searchTermObj)) return null;
+        var searchTerm = (string?)searchTermObj;
+        return searchTerm is not { Length: > 0 } ? null : searchTerm;
+    }
 
     /// <summary>
     /// Parse a query parameter that may contain comma delimited values or multiple values.
@@ -314,12 +353,82 @@ public class MeilisearchMutateFilter(
     /// <param name="context">The HttpContext extension.</param>
     /// <param name="key">The query parameter name.</param>
     /// <returns>The list of values.</returns>
-    private static ImmutableList<string> ParseQueryCommaOrMulti(ActionExecutingContext context, string key)
+    public static ImmutableList<string> GetQueryCommaOrMulti(this ActionExecutingContext context, string key)
     {
         if (!context.HttpContext.Request.Query.TryGetValue(key, out var values) || StringValues.IsNullOrEmpty(values))
             return ImmutableList<string>.Empty; // no values
         var types = values.SelectMany(it =>
             it?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []);
         return types.ToImmutableList();
+    }
+}
+
+/// <summary>
+/// copy from https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Extensions/DtoExtensions.cs
+/// </summary>
+public static class DtoExtensions
+{
+    internal static DtoOptions AddClientFields(
+        this DtoOptions dtoOptions, ActionExecutingContext context)
+    {
+        var client = context.GetUserClaimValue("Jellyfin-Client");
+
+        // No client in claim
+        if (string.IsNullOrEmpty(client))
+        {
+            return dtoOptions;
+        }
+
+        if (!dtoOptions.ContainsField(ItemFields.RecursiveItemCount))
+        {
+            if (client.Contains("kodi", StringComparison.OrdinalIgnoreCase) ||
+                client.Contains("wmc", StringComparison.OrdinalIgnoreCase) ||
+                client.Contains("media center", StringComparison.OrdinalIgnoreCase) ||
+                client.Contains("classic", StringComparison.OrdinalIgnoreCase))
+            {
+                dtoOptions.Fields = [..dtoOptions.Fields, ItemFields.RecursiveItemCount];
+            }
+        }
+
+        if (dtoOptions.ContainsField(ItemFields.ChildCount)) return dtoOptions;
+        if (client.Contains("kodi", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("wmc", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("media center", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("classic", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("roku", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("samsung", StringComparison.OrdinalIgnoreCase) ||
+            client.Contains("androidtv", StringComparison.OrdinalIgnoreCase))
+        {
+            dtoOptions.Fields = [..dtoOptions.Fields, ItemFields.ChildCount];
+        }
+
+        return dtoOptions;
+    }
+
+    internal static DtoOptions AddAdditionalDtoOptions(
+        this DtoOptions dtoOptions,
+        bool? enableImages,
+        bool? enableUserData,
+        int? imageTypeLimit,
+        IReadOnlyList<ImageType> enableImageTypes)
+    {
+        dtoOptions.EnableImages = enableImages ?? true;
+
+        if (imageTypeLimit.HasValue)
+        {
+            dtoOptions.ImageTypeLimit = imageTypeLimit.Value;
+        }
+
+        if (enableUserData.HasValue)
+        {
+            dtoOptions.EnableUserData = enableUserData.Value;
+        }
+
+        if (enableImageTypes.Count != 0)
+        {
+            dtoOptions.ImageTypes = enableImageTypes;
+        }
+
+        return dtoOptions;
     }
 }
