@@ -27,4 +27,11 @@ public class Controller(MeilisearchClientHolder clientHolder) : ControllerBase
         if (!clientHolder.Ok) await Plugin.Instance!.TryCreateMeilisearchClient();
         return GetStatus();
     }
+
+    [HttpGet("reindex")]
+    public async Task<ActionResult> Reindex()
+    {
+        await Plugin.Instance!.Indexer.Index();
+        return GetStatus();
+    }
 }
