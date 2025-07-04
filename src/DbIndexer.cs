@@ -1,9 +1,7 @@
 ﻿using System.Collections.Immutable;
 using MediaBrowser.Common.Configuration;
-using Meilisearch;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using Index = Meilisearch.Index;
 
 namespace Jellyfin.Plugin.Meilisearch;
 
@@ -17,7 +15,7 @@ public class DbIndexer(
 {
     protected override async Task<ImmutableList<MeilisearchItem>> GetItems()
     {
-        var dbPath = Path.Combine(applicationPaths.DataPath, "library.db");
+        var dbPath = Path.Combine(applicationPaths.DataPath, "jellyfin.db");
         Status["Database"] = dbPath;
         logger.LogInformation("Indexing items from database: {DB}", dbPath);
 
@@ -34,13 +32,13 @@ public class DbIndexer(
         command.CommandText =
             """
             SELECT
-                guid, type, ParentId, CommunityRating, 
+                Id, Type, ParentId, CommunityRating, 
                 Name, Overview, ProductionYear, Genres, 
                 Studios, Tags, IsFolder, CriticRating, 
                 OriginalTitle, SeriesName, Artists, 
                 AlbumArtists, Path 
             FROM 
-                TypedBaseItems
+                BaseItems
             """;
 
         await using var reader = await command.ExecuteReaderAsync();
