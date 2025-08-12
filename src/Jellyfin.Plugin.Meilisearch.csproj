@@ -9,7 +9,7 @@
     <ItemGroup>
         <PackageReference Include="Jellyfin.Controller" Version="10.10"/>
         <PackageReference Include="Jellyfin.Model" Version="10.10"/>
-        <PackageReference Include="MeiliSearch" Version="0.16.0"/>
+        <PackageReference Include="MeiliSearch" Version="0.17.0"/>
         <PackageReference Include="Microsoft.Data.Sqlite" Version="[8.0.0,)"/>
     </ItemGroup>
 
