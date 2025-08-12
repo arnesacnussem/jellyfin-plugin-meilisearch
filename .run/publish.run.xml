@@ -1,6 +1,6 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="publish" type="DotNetFolderPublish" factoryName="Publish to folder">
-    <riderPublish configuration="Debug" delete_existing_files="true" platform="Any CPU" runtime="Portable" target_folder="$PROJECT_DIR$/src/bin/Debug/net8.0/publish" target_framework="net8.0" uuid_high="-2744664243300578583" uuid_low="-4629039551512679968" />
+    <riderPublish configuration="Debug" delete_existing_files="true" platform="Any CPU" runtime="Portable" target_folder="$PROJECT_DIR$/src/bin/Debug/publish" target_framework="net9.0" uuid_high="-2744664243300578583" uuid_low="-4629039551512679968" />
     <method v="2">
       <option name="Build Solution" enabled="true" />
     </method>
