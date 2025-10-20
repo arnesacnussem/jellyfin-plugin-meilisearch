@@ -17,7 +17,7 @@ public class DbIndexer(
 {
     protected override async Task<ImmutableList<MeilisearchItem>> GetItems()
     {
-        var dbPath = Path.Combine(applicationPaths.DataPath, "library.db");
+        var dbPath = Path.Combine(applicationPaths.DataPath, "jellyfin.db");
         Status["Database"] = dbPath;
         logger.LogInformation("Indexing items from database: {DB}", dbPath);
 
