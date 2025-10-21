@@ -21,6 +21,12 @@
                             style="margin: 0; padding: 4px 4px">
                         <span>refresh</span>
                     </button>
+                    <button is="emby-button" type="button" id="meilisearch-reindex-button"
+                            class="raised button-submit block formDialogFooterItem emby-button"
+                            style="margin: 0; padding: 4px 4px;"
+                    >
+                        <span>reindex</span>
+                    </button>
                     <button is="emby-button" type="button" id="meilisearch-reconnect-button"
                             class="raised button-submit block formDialogFooterItem emby-button"
                             style="margin: 0; padding: 4px 4px; display: none"
@@ -46,16 +52,6 @@
                     <label class="inputLabel inputLabelUnfocused" for="IndexName">Meilisearch Index Name</label>
                     <input id="IndexName" is="emby-input" name="IndexName" type="text"/>
                     <div class="fieldDescription">Default to server friendly name.</div>
-                </div>
-                <div class="checkboxContainer checkboxContainer-withDescription">
-                    <label class="emby-checkbox-label">
-                        <input id="CheckPermissions" is="emby-checkbox" name="CheckPermissions" type="checkbox"/>
-                        <span>Enable Permission Control to Search Result</span>
-                    </label>
-                    <div class="fieldDescription checkboxFieldDescription">
-                        When enabled, users can only see the result they have permission to access. It may have
-                        performance impact if you have a large number of users or a large number of items.
-                    </div>
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
@@ -183,13 +179,17 @@
             const statusEl = document.querySelector('#status')
             const btn = document.querySelector('#meilisearch-refresh-status-button')
             const reconnectBtn = document.querySelector('#meilisearch-reconnect-button')
+            const reindexBtn = document.querySelector('#meilisearch-reindex-button')
             const clsNameEnabled = 'raised button-submit block formDialogFooterItem emby-button';
             const clsNameDisabled = 'block formDialogFooterItem emby-button';
             const updateStatus = (endpoint) => {
                 btn.setAttribute('disabled', 'disabled');
                 reconnectBtn.setAttribute('disabled', 'disabled');
+                reindexBtn.setAttribute('disabled', 'disabled');
                 btn.className = clsNameDisabled;
                 reconnectBtn.className = clsNameDisabled;
+                reindexBtn.className = clsNameDisabled;
+                
                 statusEl.innerText = 'loading status...';
                 ApiClient.get('/meilisearch/' + endpoint).then(r => r.json()).then(status => {
                     statusEl.innerText = JSON.stringify(status, null, 2);
@@ -204,12 +204,16 @@
                 }).finally(() => {
                     btn.removeAttribute('disabled');
                     reconnectBtn.removeAttribute('disabled');
+                    reindexBtn.removeAttribute('disabled');
                     btn.className = clsNameEnabled;
                     reconnectBtn.className = clsNameEnabled;
+                    reindexBtn.className = clsNameEnabled;
                 })
             }
             btn.addEventListener('click', () => updateStatus('status'));
             reconnectBtn.addEventListener('click', () => updateStatus('reconnect'));
+            reindexBtn.addEventListener('click', () => updateStatus('reindex'));
+
 
             document.querySelector('#MeilisearchConfigPage')
                 .addEventListener('pageshow', function () {
@@ -220,7 +224,6 @@
                         document.querySelector('#Debug').checked = config.Debug;
                         document.querySelector('#IndexName').value = config.IndexName;
                         document.querySelector('#Fallback').checked = config.FallbackToJellyfin;
-                        document.querySelector('#CheckPermissions').checked = !config.DisablePermissionChecks;
                         generateCheckboxList(config.AttributesToSearchOn)
                         Dashboard.hideLoadingMsg();
                     });
@@ -237,7 +240,6 @@
                         config.IndexName = document.querySelector('#IndexName').value;
                         config.AttributesToSearchOn = getSelectedSearchableFields();
                         config.FallbackToJellyfin = document.querySelector('#Fallback').checked;
-                        config.DisablePermissionChecks = !document.querySelector('#CheckPermissions').checked;
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });
