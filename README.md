@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=arnesacnussem&project=jellyfin-plugin-meilisearch&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 # Meilisearch Plugin for Jellyfin
 
 A plugin for Jellyfin that try to improves search speed and result by utilize Meilisearch as search engine.
