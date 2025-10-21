@@ -1,7 +1,6 @@
 ﻿using MediaBrowser.Controller;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Index = Meilisearch.Index;
 
 namespace Jellyfin.Plugin.Meilisearch;
@@ -26,7 +25,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
     public async Task Set(Config configuration)
     {
-        if (configuration.Url.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(configuration.Url))
         {
             logger.LogWarning("Missing Meilisearch URL");
             Client = null;
@@ -36,7 +35,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
         try
         {
-            var apiKey = configuration.ApiKey.IsNullOrEmpty() ? null : configuration.ApiKey;
+            var apiKey = string.IsNullOrEmpty(configuration.ApiKey) ? null : configuration.ApiKey;
             Client = new MeilisearchClient(configuration.Url, apiKey);
             Index = await GetIndex(Client);
             UpdateMeilisearchHealth();
@@ -67,7 +66,8 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
     {
         var configName = Plugin.Instance?.Configuration.IndexName;
         var sanitizedConfigName = applicationHost.FriendlyName.Replace(" ", "-");
-        var index = meilisearch.Index(configName.IsNullOrEmpty() ? sanitizedConfigName : configName);
+        var indexName = string.IsNullOrEmpty(configName) ? sanitizedConfigName : configName!;
+        var index = meilisearch.Index(indexName);
 
         await index.UpdateFilterableAttributesAsync(
             ["type", "parentId", "isFolder"]

@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
@@ -200,7 +199,7 @@ public class MeilisearchMutateFilter(
         // mediaTypes add types from the search
         var mediaTypes = context.GetQueryCommaOrMulti("mediaTypes");
         logger.LogDebug("mediaTypes={mediaTypes}", string.Join(", ", mediaTypes));
-        if (!mediaTypes.IsNullOrEmpty())
+        if (mediaTypes.Count > 0)
         {
             // If mediaTypes is set, we only search for those types
             filteredTypes.AddRange(ToJellyfinTypes(mediaTypes));
