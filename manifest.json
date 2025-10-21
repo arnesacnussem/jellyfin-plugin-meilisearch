@@ -13,7 +13,7 @@
         "changelog": "Initial release with Meilisearch integration",
         "targetAbi": "10.9.0.0",
         "sourceUrl": "https://github.com/Kehlanii/jellyfin-plugin-meilisearch-10.11.0/releases/download/10.11.0/Jellyfin.Plugin.Meilisearch.zip",
-        "checksum": "3CAB379C00388701672D50E1D55C115E615D40250F654CD263E239D8807F9357",
+        "checksum": "C94096B96ECEA1F3E8D3CAA34C14C45C",
         "timestamp": "2025-10-20T23:56:00Z"
       }
     ]
