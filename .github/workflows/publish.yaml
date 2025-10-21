@@ -5,6 +5,17 @@ on:
     tags:
       - '*'
   workflow_dispatch:
+    inputs:
+      dotnet-version:
+        required: false
+        default: "9.0.x"
+        description: "The .NET version to setup for the build"
+        type: string
+      dotnet-target:
+        required: false
+        default: "net9.0"
+        description: "The .NET target to set for JPRM"
+        type: string
 
 jobs:
   build:
