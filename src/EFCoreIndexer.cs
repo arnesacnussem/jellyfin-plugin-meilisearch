@@ -40,7 +40,8 @@ public class EfCoreIndexer(
             Artists: item.Artists?.Split('|'),
             AlbumArtists: item.AlbumArtists?.Split('|'),
             CriticRating: item.CriticRating,
-            IsFolder: item.IsFolder
+            IsFolder: item.IsFolder,
+            Tagline: item.Tagline
         );
     }
 }

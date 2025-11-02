@@ -7,7 +7,7 @@ public class Config : BasePluginConfiguration
     public static readonly string[] DefaultAttributesToSearchOn =
     [
         "name", "artists", "albumArtists", "originalTitle", "productionYear", "seriesName", "genres", "tags",
-        "studios", "overview", "path"
+        "studios", "overview", "path", "tagline"
     ];
 
     public Config()
