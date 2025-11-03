@@ -36,7 +36,7 @@ public class DbIndexer(
                 Name, Overview, ProductionYear, Genres, 
                 Studios, Tags, IsFolder, CriticRating, 
                 OriginalTitle, SeriesName, Artists, 
-                AlbumArtists, Path 
+                AlbumArtists, Path, Tagline
             FROM 
                 BaseItems
             """;
@@ -62,7 +62,8 @@ public class DbIndexer(
                 SeriesName: !reader.IsDBNull(13) ? reader.GetString(13) : null,
                 Artists: !reader.IsDBNull(14) ? reader.GetString(14).Split('|') : null,
                 AlbumArtists: !reader.IsDBNull(15) ? reader.GetString(15).Split('|') : null,
-                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null
+                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null,
+                Tagline: !reader.IsDBNull(17) ? reader.GetString(17) : null
             );
             if (item.Path?[0] == '%') item = item with { Path = null };
             items.Add(item);
