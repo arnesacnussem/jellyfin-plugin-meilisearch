@@ -232,7 +232,9 @@ public class MeilisearchMutateFilter(
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
             : 0;
-        var limitPreItem = Math.Clamp(limit / filteredTypes.Count, 30, 100);
+        var limitPreItem = filteredTypes.Count > 0 && limit > 0
+            ? Math.Clamp(limit / filteredTypes.Count, 30, 100)
+            : 30;
         var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limitPreItem);
 
         // remove items that are not visible to the user
