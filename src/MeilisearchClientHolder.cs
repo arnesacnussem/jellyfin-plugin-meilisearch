@@ -45,7 +45,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
                 : envApiKey;
             // Check for environment variable first
             var envURL = Environment.GetEnvironmentVariable("MEILI_URL");
-            // Use API key from config if env var is not set
+            // Use URL from config if env var is not set
             var Url = string.IsNullOrEmpty(envURL) 
                 ? (string.IsNullOrEmpty(configuration.Url) ? null : configuration.Url)
                 : envURL;
