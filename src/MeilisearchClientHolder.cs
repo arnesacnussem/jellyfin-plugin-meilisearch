@@ -1,7 +1,6 @@
 ﻿using MediaBrowser.Controller;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Index = Meilisearch.Index;
 
 namespace Jellyfin.Plugin.Meilisearch;
