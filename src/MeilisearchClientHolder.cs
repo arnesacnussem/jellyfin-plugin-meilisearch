@@ -1,7 +1,6 @@
 ﻿using MediaBrowser.Controller;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Index = Meilisearch.Index;
 
 namespace Jellyfin.Plugin.Meilisearch;
@@ -26,7 +25,8 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
     public async Task Set(Config configuration)
     {
-        if (string.IsNullOrEmpty(configuration.Url))
+        if (string.IsNullOrEmpty(configuration.Url) && 
+            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MEILI_URL")))
         {
             logger.LogWarning("Missing Meilisearch URL");
             Client = null;
@@ -37,8 +37,19 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
         try
         {
-            var apiKey = string.IsNullOrEmpty(configuration.ApiKey) ? null : configuration.ApiKey;
-            Client = new MeilisearchClient(configuration.Url, apiKey);
+            // Check for environment variable first
+            var envApiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY");
+            // Use API key from config if env var is not set
+            var apiKey = string.IsNullOrEmpty(envApiKey)
+                ? (string.IsNullOrEmpty(configuration.ApiKey) ? null : configuration.ApiKey)
+                : envApiKey;
+            // Check for environment variable first
+            var envURL = Environment.GetEnvironmentVariable("MEILI_URL");
+            // Use URL from config if env var is not set
+            var Url = string.IsNullOrEmpty(envURL) 
+                ? (string.IsNullOrEmpty(configuration.Url) ? null : configuration.Url)
+                : envURL;
+            Client = new MeilisearchClient(Url, apiKey);
             Index = await GetIndex(Client);
             UpdateMeilisearchHealth();
         }

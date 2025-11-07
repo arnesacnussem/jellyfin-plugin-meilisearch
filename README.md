@@ -14,10 +14,13 @@ Inspired by [JellySearch](https://gitlab.com/DomiStyle/jellysearch).
 
 1. Setup a Meilisearch instance (maybe a hosted one in the cloud will also work, but I don't recommend).
 2. Add following repository and install the Meilisearch plugin.
+
     ```
     https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
     ```
+
 3. Fill url to your Meilisearch instance in plugin settings, and maybe api key also required according to your Meilisearch setup.
+   - You can set the environment variables `MEILI_URL` and `MEILI_MASTER_KEY` to configure the plugin without editing the Jellyfin UI.
 4. If you want share one Meilisearch instance across multiple Jellyfin instance, you can fill the `Meilisearch Index Name`, if leaving empty, it will use the server name.
 5. Remember click `Save` and make sure the status reports `ok`.
 6. Try typing something in search page.
@@ -25,6 +28,7 @@ Inspired by [JellySearch](https://gitlab.com/DomiStyle/jellysearch).
     ---
 
 Index will update on following events:
+
 - Server start
 - Configuration change
 - Library scan complete
@@ -39,6 +43,7 @@ So it may only support a few versions of Jellyfin. At the moment I'm using `Jell
 but it should work on other versions as long as the required parameter name of `/Items` endpoint doesn't change.
 
 ---
+
 ###
 
 I've seen JellySearch, which is a wonderful project, but I don't really like setting up a reverse proxy or any of that hassle.
@@ -46,4 +51,3 @@ I've seen JellySearch, which is a wonderful project, but I don't really like set
 So I am writing this, but it still requires a Meilisearch instance.
 
 At this moment, only the `/Items` endpoint is affected by this plugin, but it still improves a lot on my 200k items library.
-
