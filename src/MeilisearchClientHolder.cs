@@ -25,7 +25,8 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
     public async Task Set(Config configuration)
     {
-        if (string.IsNullOrEmpty(configuration.Url))
+        if (string.IsNullOrEmpty(configuration.Url) && 
+            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MEILI_URL")))
         {
             logger.LogWarning("Missing Meilisearch URL");
             Client = null;
