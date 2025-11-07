@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.6",
+                "changelog": "- [e90f65d] Fix DivideByZeroException when limit or filteredTypes.Count is zero (#70)\n- [9222079] ci(deps): Bump actions/upload-artifact from 4.6.2 to 5.0.0 (#67)\n- [51b2e30] ci(deps): Bump actions/download-artifact from 5.0.0 to 6.0.0 (#66)\n- [b78fa71] Tagline searching (#68)\n- [e65fb94] Enhance publish.yaml with .NET inputs\n- [56251a3] Support Jellyfin 10.11 (#46)\n- [964e84f] chore: Bump MeiliSearch from 0.17.0 to 0.17.1 (#58)\n- [e686e5f] ci(deps): bump ad-m/github-push-action from 0.8.0 to 1.0.0 (#57)\n- [96004e2] ci(deps): bump ncipollo/release-action from 1.19.1 to 1.20.0 (#55)\n- [6c523f0] ci(deps): bump actions/setup-dotnet from 4.3.1 to 5.0.0 (#54)\n- [0710117] ci(deps): Bump ncipollo/release-action from 1.18.0 to 1.19.1 (#53)\n- [5ece260] chore: Bump MeiliSearch from 0.16.0 to 0.17.0 (#49)\n- [e14c999] ci(deps): bump actions/download-artifact from 4.3.0 to 5.0.0 (#48)\n- [a617a3c] ci(deps): bump actions/checkout from 4.2.2 to 5.0.0 (#47)\n- [3aeb27e] add a LICENSE\n- [1f42852] refactor: improve status display and indexing logic refactor: remove unnecessary newline in MeilisearchMutateFilter\n- [d8a73e3] ci(deps): bump ncipollo/release-action from 1.16.0 to 1.18.0 (#44)",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.6/meilisearch_1.11.1.6.zip",
+                "checksum": "0b0519d636d7eca878aea4f250097700",
+                "timestamp": "2025-11-07T19:03:20Z"
+            },
+            {
                 "version": "1.11.1.5",
                 "changelog": "- [2b07d86] try hard coded\n- [117f7f8] fix code problems\n- [e65fb94] Enhance publish.yaml with .NET inputs\n- [56251a3] Support Jellyfin 10.11 (#46)\n- [964e84f] chore: Bump MeiliSearch from 0.17.0 to 0.17.1 (#58)\n- [e686e5f] ci(deps): bump ad-m/github-push-action from 0.8.0 to 1.0.0 (#57)\n- [96004e2] ci(deps): bump ncipollo/release-action from 1.19.1 to 1.20.0 (#55)\n- [6c523f0] ci(deps): bump actions/setup-dotnet from 4.3.1 to 5.0.0 (#54)\n- [0710117] ci(deps): Bump ncipollo/release-action from 1.18.0 to 1.19.1 (#53)\n- [5ece260] chore: Bump MeiliSearch from 0.16.0 to 0.17.0 (#49)\n- [e14c999] ci(deps): bump actions/download-artifact from 4.3.0 to 5.0.0 (#48)\n- [a617a3c] ci(deps): bump actions/checkout from 4.2.2 to 5.0.0 (#47)\n- [3aeb27e] add a LICENSE\n- [1f42852] refactor: improve status display and indexing logic refactor: remove unnecessary newline in MeilisearchMutateFilter\n- [d8a73e3] ci(deps): bump ncipollo/release-action from 1.16.0 to 1.18.0 (#44)",
                 "targetAbi": "10.11.0.0",
