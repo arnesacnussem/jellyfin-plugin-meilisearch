@@ -108,9 +108,9 @@
             console.log("[Meilisearch plugin] apply a workaround which changes window.URL, see https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/issues/5")
             // Replace the URL constructor
             window.URL = function (url, base) {
-                if (["/meilisearch/status", "/meilisearch/reconnect",].includes(url))
-                    return new URL(window.location); // Return empty URL for blocked URLs
-                return new OriginalURL(url, base); // Otherwise, use the original behavior
+                if (["/meilisearch/status", "/meilisearch/reconnect", "/meilisearch/reindex"].includes(url))
+                    return new OriginalURL(window.location);
+                return new OriginalURL(url, base);
             };
 
             // Ensure the prototype chain is maintained
