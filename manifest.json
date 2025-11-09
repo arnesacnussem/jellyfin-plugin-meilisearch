@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.8",
+                "changelog": "- [fba77fd] config: integrate SVG into HTML for offline usage\n- [7fc2730] add all links to the workaround\n- [4e5d862] allow to configuration through container ENV (#71)",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.8/meilisearch_1.11.1.8.zip",
+                "checksum": "b7e248a63ded4f1cf304fd2b74f67efe",
+                "timestamp": "2025-11-09T20:58:58Z"
+            },
+            {
                 "version": "1.11.1.7",
                 "changelog": "- [7cc0ebe] mention envs\n- [ead316b] adjust Url check\n- [e1e34bd] cleanup\n- [cc33ba7] Update src/MeilisearchClientHolder.cs\n- [d9ce733] allow to configuration through container ENV",
                 "targetAbi": "10.11.0.0",
