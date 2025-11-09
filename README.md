@@ -39,7 +39,7 @@ Index will update on following events:
 ### How it works
 
 The core feature, which is to mutate the search request, is done by injecting an [`ActionFilter`](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/filters?view=aspnetcore-8.0#action-filters).
-So it may only support a few versions of Jellyfin. At the moment I'm using `Jellyfin 10.10.0`,
+So it may only support a few versions of Jellyfin. At the moment I'm using `Jellyfin 10.11.0`,
 but it should work on other versions as long as the required parameter name of `/Items` endpoint doesn't change.
 
 ---
