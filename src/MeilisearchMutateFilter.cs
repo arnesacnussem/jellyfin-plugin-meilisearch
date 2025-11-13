@@ -228,6 +228,24 @@ public class MeilisearchMutateFilter(
             }
         }
 
+        // Default to common types if no types were specified
+        if (filteredTypes.Count == 0)
+        {
+            // Use TryGetValue for safer access to JellyfinTypeMap
+            var defaultTypeKeys = new[] { "Movie", "Episode", "Series", "Person" };
+            foreach (var key in defaultTypeKeys)
+            {
+                if (JellyfinTypeMap.TryGetValue(key, out var typeValue))
+                {
+                    filteredTypes.Add(typeValue);
+                }
+                else
+                {
+                    logger.LogWarning("JellyfinTypeMap is missing expected key: {key}", key);
+                }
+            }
+        }
+
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
             : 0;
