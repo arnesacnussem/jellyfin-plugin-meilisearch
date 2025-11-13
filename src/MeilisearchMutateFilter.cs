@@ -228,6 +228,12 @@ public class MeilisearchMutateFilter(
             }
         }
 
+        // Default to common types if no types were specified
+        if (filteredTypes.Count == 0)
+        {
+            filteredTypes.AddRange([JellyfinTypeMap["Movie"], JellyfinTypeMap["Episode"], JellyfinTypeMap["Series"], JellyfinTypeMap["Person"]]);
+        }
+
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
             : 0;
