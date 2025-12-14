@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.9",
+                "changelog": "- [438b910] feat: enhance Meilisearch client with reconnect logic and health checks\n- [0a0ce10] chore: Bump MeiliSearch from 0.17.1 to 0.18.0 (#82)\n- [ad6a7e1] ci(deps): bump actions/download-artifact from 6.0.0 to 7.0.0 (#80)\n- [c90ce69] ci(deps): bump actions/upload-artifact from 5.0.0 to 6.0.0 (#81)\n- [6083528] ci(deps): bump actions/checkout from 6.0.0 to 6.0.1 (#78)\n- [8acd7de] ci(deps): bump actions/checkout from 5.0.1 to 6.0.0 (#75)\n- [e446305] ci(deps): bump actions/setup-dotnet from 5.0.0 to 5.0.1 (#76)\n- [d7ac2ea] ci(deps): bump actions/checkout from 5.0.0 to 5.0.1 (#74)\n- [e5a30dc] Update Jellyfin version in README",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.9/meilisearch_1.11.1.9.zip",
+                "checksum": "87d8eaf161489c6775364f0c3f9429c1",
+                "timestamp": "2025-12-14T22:14:21Z"
+            },
+            {
                 "version": "1.11.1.8",
                 "changelog": "- [fba77fd] config: integrate SVG into HTML for offline usage\n- [7fc2730] add all links to the workaround\n- [4e5d862] allow to configuration through container ENV (#71)",
                 "targetAbi": "10.11.0.0",
