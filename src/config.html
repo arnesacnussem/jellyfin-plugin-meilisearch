@@ -116,38 +116,6 @@
     </div>
     <script type="text/javascript">
         (() => {
-            /*
-             * TODO: restore this after they change
-             *  
-             * this part is a workaround to https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/issues/5
-             * 
-             * 
-             * Their code here https://github.com/Namo2/InPlayerEpisodePreview/blob/4eba9531f6b6fd9a61b36a66d1f8aa148060e582/Namo.Plugin.InPlayerEpisodePreview/Web/Services/DataFetcher.ts#L14
-             * replaced `window.fetch` and caused some side effect, maybe you can open a issue [there](https://github.com/Namo2/InPlayerEpisodePreview/issues/new).
-             * 
-             * the problem is https://github.com/Namo2/InPlayerEpisodePreview/blob/4eba9531f6b6fd9a61b36a66d1f8aa148060e582/Namo.Plugin.InPlayerEpisodePreview/Web/Services/DataFetcher.ts#L25, 
-             * which try to resolve url passed to `fetch`, 
-             * the url it trying to resolve is `/meilisearch/status`, 
-             * when calling `new URL("/meilisearch/status")` this error will throw, 
-             * the only workaround i can imagine is to replace constructor of `URL` to ignore some certain path used by this plugin, 
-             * but idk if this can be acheived.
-             */
-
-            const OriginalURL = URL;
-            console.log("[Meilisearch plugin] apply a workaround which changes window.URL, see https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/issues/5")
-            // Replace the URL constructor
-            window.URL = function (url, base) {
-                if (["/meilisearch/status", "/meilisearch/reconnect", "/meilisearch/reindex"].includes(url))
-                    return new OriginalURL(window.location);
-                return new OriginalURL(url, base);
-            };
-
-            // Ensure the prototype chain is maintained
-            window.URL.prototype = OriginalURL.prototype;
-            window.URL.prototype.constructor = window.URL;
-            window.OriginalURL = OriginalURL
-        })();
-        (() => {
             const allSearchableFields = [
                 "name", "artists", "albumArtists",
                 "originalTitle", "productionYear",
