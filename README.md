@@ -36,12 +36,13 @@ Improved:
         ports:
           - 7700:7700
    ```
-3. In Jellyfin:
+3. Install the Meilisearch plugin. In Jellyfin:
     1. Add the plugin Repository:
         ```
         https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
         ```
     2. Install the Meilisearch plugin
+    3. Restart Jellyfin Server
 
 5. Configure Meilisearch plugin:
    1. URL to your Meilisearch instance _(example: `http://meilisearch:7700`)_
