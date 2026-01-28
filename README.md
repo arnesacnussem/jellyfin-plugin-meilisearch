@@ -16,7 +16,7 @@ Improved:
 ### Usage
 
 1. Setup a Meilisearch instance _(maybe a hosted one in the cloud will also work, but I don't recommend)_
-    - Example Docker Compose:
+    - Docker is recommended. Example `docker-compose.yml`:
    ```
    services:
       meilisearch:
