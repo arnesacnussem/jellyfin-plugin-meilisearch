@@ -17,25 +17,25 @@ Improved:
 
 1. **Setup a Meilisearch instance** _(maybe a hosted one in the cloud will also work, but I don't recommend)_
     - Docker is recommended. Example `docker-compose.yml`:
-   ```
-   services:
-      meilisearch:
-        container_name: meilisearch
-        image: getmeili/meilisearch:v1.34 # older versions may have compatibility issues
-        restart: unless-stopped
-    
-        environment:
-          MEILI_ENV: production
-          MEILI_NO_ANALYTICS: "true"
-          MEILI_MASTER_KEY: super-secret-key
-    
-        volumes:
-          # meilisearch's data
-          - ./data:/meili_data
-    
-        ports:
-          - 7700:7700
-   ```
+       ```
+       services:
+          meilisearch:
+            container_name: meilisearch
+            image: getmeili/meilisearch:v1.34 # older versions may have compatibility issues
+            restart: unless-stopped
+        
+            environment:
+              MEILI_ENV: production
+              MEILI_NO_ANALYTICS: "true"
+              MEILI_MASTER_KEY: super-secret-key
+        
+            volumes:
+              # meilisearch's data
+              - ./data:/meili_data
+        
+            ports:
+              - 7700:7700
+       ```
 3. **Install the Meilisearch plugin**
     - In Jellyfin:
         1. Add the plugin Repository:
