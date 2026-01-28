@@ -1,12 +1,15 @@
 # Meilisearch Plugin for Jellyfin
 
-A plugin for Jellyfin that try to improves search speed and result by utilize Meilisearch as search engine.
+A plugin for Jellyfin that improves search by utilizing Meilisearch as a search engine. Search logic is offloaded to a Meilisearch instance, and the response from Jellyfin is modified 
 
-This plugin offload search logic to Meilisearch, and modifies response from Jellyfin.
+Improved:
+* Speed
+* Results _([fuzzy matching](https://en.wikipedia.org/wiki/Approximate_string_matching), typos)_
 
-As long as your client uses `/Items` endpoint for search, it should be supported seamlessly I guess.
+> [!NOTE]
+> As long as your client uses `/Items` endpoint for search, it should be supported seamlessly _I guess_
 
-Inspired by [JellySearch](https://gitlab.com/DomiStyle/jellysearch).
+> Inspired by [JellySearch](https://gitlab.com/DomiStyle/jellysearch).
 
 ---
 
