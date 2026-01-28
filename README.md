@@ -15,7 +15,7 @@ Improved:
 
 ### Setup instructions
 
-1. Setup a Meilisearch instance _(maybe a hosted one in the cloud will also work, but I don't recommend)_
+1. **Setup a Meilisearch instance** _(maybe a hosted one in the cloud will also work, but I don't recommend)_
     - Docker is recommended. Example `docker-compose.yml`:
    ```
    services:
@@ -36,17 +36,18 @@ Improved:
         ports:
           - 7700:7700
    ```
-3. Install the Meilisearch plugin. In Jellyfin:
-    1. Add the plugin Repository:
-        ```
-        https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
-        ```
-    2. Install the Meilisearch plugin
-    3. Restart Jellyfin Server
+3. **Install the Meilisearch plugin**
+    - In Jellyfin:
+        1. Add the plugin Repository:
+            ```
+            https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
+            ```
+        2. Install the Meilisearch plugin
+        3. Restart Jellyfin Server
 
-5. Configure Meilisearch plugin:
-   1. URL to your Meilisearch instance _(example: `http://meilisearch:7700`)_
-   2. API key _(if required)_ _(example: `super-secret-key`)_
+5. Configure the Meilisearch plugin:
+   1. **Meilisearch URL**: URL to your Meilisearch instance, as seen by Jellyfin _(example: `http://meilisearch:7700`)_
+   2.  **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_
 
 > [!NOTE]
 > You can also set the environment variables in Jellyfin, to configure the plugin without editing the Jellyfin UI: `MEILI_URL` and `MEILI_MASTER_KEY`
