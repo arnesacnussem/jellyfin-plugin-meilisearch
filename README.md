@@ -45,10 +45,25 @@ Improved:
         2. Install the Meilisearch plugin
         3. Restart Jellyfin Server
 
-5. **Configure the Meilisearch plugin**
+4. **Configure the Meilisearch plugin**
    - In Meilisearch plugin's page:    
        1. **Meilisearch URL**: URL to your Meilisearch instance, as seen by Jellyfin _(example: `http://meilisearch:7700`)_
-       2.  **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_
+       2. **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_ 
+       3. Click `Save`
+       4. The plugin's page should show a healthy status
+           - Example:
+              ```
+              {
+                  "meilisearch": "Server: available",
+                  "meilisearchOk": true,
+                  "averageSearchTime": "0ms",
+                  "indexStatus": {
+                    "Database": "Data Source=/config/data/jellyfin.db;Cache=Default;Default Timeout=30;Pooling=True",
+                    "Items": "20569",
+                    "LastIndexed": "1/28/2026 4:10:01 PM"
+                  }
+                }
+              ```
 
 > [!NOTE]
 > You can also set the environment variables in Jellyfin, to configure the plugin without editing the Jellyfin UI: `MEILI_URL` and `MEILI_MASTER_KEY`
@@ -56,24 +71,9 @@ Improved:
 > [!NOTE]
 > If you want share one Meilisearch instance across multiple Jellyfin instance, you can fill the `Meilisearch Index Name`, if leaving empty, it will use the server name.
 
-9. Test Meilisearch plugin search
-    1. Click `Save`
-    2. The plugin's page should show a healthy status
-        - Example:
-          ```
-          {
-              "meilisearch": "Server: available",
-              "meilisearchOk": true,
-              "averageSearchTime": "0ms",
-              "indexStatus": {
-                "Database": "Data Source=/config/data/jellyfin.db;Cache=Default;Default Timeout=30;Pooling=True",
-                "Items": "20569",
-                "LastIndexed": "1/28/2026 4:10:01 PM"
-              }
-            }
-          ```
-    3. Try Jellyfin search
-    4. Issues? Check **Jellyfin's logs** and **Meilisearch's logs**
+5. Test Meilisearch plugin search
+    1. Try Jellyfin search
+    2. Issues? Check **Jellyfin's logs** and **Meilisearch's logs**
 
     ---
 
