@@ -48,7 +48,7 @@ Improved:
 4. **Configure the Meilisearch plugin**
    - In Meilisearch plugin's page:    
        1. **Meilisearch URL**: URL to your Meilisearch instance, as seen by Jellyfin _(example: `http://meilisearch:7700`)_
-       2. **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_ 
+       2. **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_
        3. Click `Save`
        4. The plugin's page should show a healthy status
            - Example:
