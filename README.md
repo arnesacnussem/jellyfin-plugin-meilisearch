@@ -15,18 +15,62 @@ Improved:
 
 ### Usage
 
-1. Setup a Meilisearch instance (maybe a hosted one in the cloud will also work, but I don't recommend).
-2. Add following repository and install the Meilisearch plugin.
+1. Setup a Meilisearch instance _(maybe a hosted one in the cloud will also work, but I don't recommend)_
+    - Example Docker Compose:
+   ```
+   services:
+      meilisearch:
+        container_name: meilisearch
+        image: getmeili/meilisearch:v1.34 # older versions may have compatibility issues
+        restart: unless-stopped
+    
+        environment:
+          MEILI_ENV: production
+          MEILI_NO_ANALYTICS: "true"
+          MEILI_MASTER_KEY: super-secret-key
+    
+        volumes:
+          # meilisearch's data
+          - ./data:/meili_data
+    
+        ports:
+          - 7700:7700
+   ```
+3. In Jellyfin:
+    1. Add the plugin Repository:
+        ```
+        https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
+        ```
+    2. Install the Meilisearch plugin
 
-    ```
-    https://raw.githubusercontent.com/arnesacnussem/jellyfin-plugin-meilisearch/refs/heads/master/manifest.json
-    ```
+5. Configure Meilisearch plugin:
+   1. URL to your Meilisearch instance _(example: `http://meilisearch:7700`)_
+   2. API key _(if required)_ _(example: `super-secret-key`)_
 
-3. Fill url to your Meilisearch instance in plugin settings, and maybe api key also required according to your Meilisearch setup.
-   - You can set the environment variables `MEILI_URL` and `MEILI_MASTER_KEY` to configure the plugin without editing the Jellyfin UI.
-4. If you want share one Meilisearch instance across multiple Jellyfin instance, you can fill the `Meilisearch Index Name`, if leaving empty, it will use the server name.
-5. Remember click `Save` and make sure the status reports `ok`.
-6. Try typing something in search page.
+> [!NOTE]
+> You can also set the environment variables in Jellyfin, to configure the plugin without editing the Jellyfin UI: `MEILI_URL` and `MEILI_MASTER_KEY`
+
+> [!NOTE]
+> If you want share one Meilisearch instance across multiple Jellyfin instance, you can fill the `Meilisearch Index Name`, if leaving empty, it will use the server name.
+
+9. Test Meilisearch plugin search
+    1. Click `Save`
+    2. The plugin's page should show a healthy status
+        - Example:
+          ```
+          {
+              "meilisearch": "Server: available",
+              "meilisearchOk": true,
+              "averageSearchTime": "0ms",
+              "indexStatus": {
+                "Database": "Data Source=/config/data/jellyfin.db;Cache=Default;Default Timeout=30;Pooling=True",
+                "Items": "20569",
+                "LastIndexed": "1/28/2026 4:10:01 PM"
+              }
+            }
+          ```
+    3. Try Jellyfin search
+    4. Issues? Check **Jellyfin's logs** and **Meilisearch's logs**
 
     ---
 
