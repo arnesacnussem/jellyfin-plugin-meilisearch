@@ -45,9 +45,10 @@ Improved:
         2. Install the Meilisearch plugin
         3. Restart Jellyfin Server
 
-5. Configure the Meilisearch plugin:
-   1. **Meilisearch URL**: URL to your Meilisearch instance, as seen by Jellyfin _(example: `http://meilisearch:7700`)_
-   2.  **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_
+5. **Configure the Meilisearch plugin**
+   - In Meilisearch plugin's page:    
+       1. **Meilisearch URL**: URL to your Meilisearch instance, as seen by Jellyfin _(example: `http://meilisearch:7700`)_
+       2.  **Meilisearch Api Key**: API key to access your Meilisearch instance _(if required)_ _(example: `super-secret-key`)_
 
 > [!NOTE]
 > You can also set the environment variables in Jellyfin, to configure the plugin without editing the Jellyfin UI: `MEILI_URL` and `MEILI_MASTER_KEY`
