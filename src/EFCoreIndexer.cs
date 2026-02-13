@@ -12,12 +12,13 @@ public class EfCoreIndexer(
     ILogger<DbIndexer> logger
 ) : Indexer(clientHolder, logger)
 {
-    protected override Task<ImmutableList<MeilisearchItem>> GetItems()
+    protected override async Task<ImmutableList<MeilisearchItem>> GetItems()
     {
-        var context = dbProvider.DbContextFactory!.CreateDbContext();
+        using var context = dbProvider.DbContextFactory!.CreateDbContext();
         Status["Database"] = context.Database.GetDbConnection().ConnectionString;
 
-        return Task.FromResult(context.BaseItems.ToImmutableList().Select(ToMeilisearchItem).ToImmutableList());
+        var entities = await context.BaseItems.AsNoTracking().ToListAsync();
+        return entities.Select(ToMeilisearchItem).ToImmutableList();
     }
 
 
