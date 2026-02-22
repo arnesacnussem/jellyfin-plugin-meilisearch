@@ -141,9 +141,9 @@ public class MeilisearchMutateFilter(
             var itemTypeFilterStr = string.Join(" OR ", itemTypeFilter);
 
             var filter = "";
-            if(additionQuery.Count > 0 && itemTypes.Count > 0) filter = $"({itemTypeFilterStr}) AND {additionQueryStr}";
-            else if(additionQuery.Count > 0) filter = additionQueryStr;
-            else if(itemTypes.Count > 0) filter = itemTypeFilterStr;
+            if (additionQuery.Count > 0 && itemTypes.Count > 0) filter = $"({itemTypeFilterStr}) AND {additionQueryStr}";
+            else if (additionQuery.Count > 0) filter = additionQueryStr;
+            else if (itemTypes.Count > 0) filter = itemTypeFilterStr;
 
             var results = await index.SearchAsync<MeilisearchItem>(
                 searchTerm,
