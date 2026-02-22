@@ -136,20 +136,26 @@ public class MeilisearchMutateFilter(
         try
         {
             var additionQuery = additionalFilters.Select(it => $"{it.Key} = {it.Value}").ToList();
-            var additionQueryStr = additionQuery.Count > 0 ? $" AND {string.Join(" AND ", additionQuery)}" : "";
-            foreach (var itemType in itemTypes)
-            {
-                var results = await index.SearchAsync<MeilisearchItem>(
-                    searchTerm,
-                    new SearchQuery
-                    {
-                        Filter = $"type = \"{itemType}\" {additionQueryStr}",
-                        Limit = limitPerType,
-                        AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
-                    }
-                );
-                items.AddRange(results.Hits);
-            }
+            var additionQueryStr = string.Join(" AND ", additionQuery);
+            var itemTypeFilter = itemTypes.Select(it => $"type = \"{it}\"").ToList();
+            var itemTypeFilterStr = string.Join(" OR ", itemTypeFilter);
+
+            var filter = string.Empty;
+            if (additionQuery.Count > 0 && itemTypes.Count > 0) filter = $"({itemTypeFilterStr}) AND {additionQueryStr}";
+            else if (additionQuery.Count > 0) filter = additionQueryStr;
+            else if (itemTypes.Count > 0) filter = itemTypeFilterStr;
+
+            var totalLimit = limitPerType;
+            var results = await index.SearchAsync<MeilisearchItem>(
+                searchTerm,
+                new SearchQuery
+                {
+                    Filter = filter,
+                    Limit = totalLimit,
+                    AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
+                }
+            );
+            items.AddRange(results.Hits);
         }
         catch (MeilisearchCommunicationError e)
         {
