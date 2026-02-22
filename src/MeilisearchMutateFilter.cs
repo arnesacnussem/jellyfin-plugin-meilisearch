@@ -140,7 +140,7 @@ public class MeilisearchMutateFilter(
             var itemTypeFilter = itemTypes.Select(it => $"type = \"{it}\"").ToList();
             var itemTypeFilterStr = string.Join(" OR ", itemTypeFilter);
 
-            var filter = "";
+            var filter = string.Empty;
             if (additionQuery.Count > 0 && itemTypes.Count > 0) filter = $"({itemTypeFilterStr}) AND {additionQueryStr}";
             else if (additionQuery.Count > 0) filter = additionQueryStr;
             else if (itemTypes.Count > 0) filter = itemTypeFilterStr;
