@@ -145,12 +145,13 @@ public class MeilisearchMutateFilter(
             else if (additionQuery.Count > 0) filter = additionQueryStr;
             else if (itemTypes.Count > 0) filter = itemTypeFilterStr;
 
+            var totalLimit = limitPerType;
             var results = await index.SearchAsync<MeilisearchItem>(
                 searchTerm,
                 new SearchQuery
                 {
                     Filter = filter,
-                    Limit = limitPerType,
+                    Limit = totalLimit,
                     AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
                 }
             );
