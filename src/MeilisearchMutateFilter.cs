@@ -129,27 +129,33 @@ public class MeilisearchMutateFilter(
         string searchTerm,
         List<string> itemTypes,
         List<KeyValuePair<string, string>> additionalFilters,
-        int limitPerType
+        int totalLimit
     )
     {
         List<MeilisearchItem> items = [];
         try
         {
             var additionQuery = additionalFilters.Select(it => $"{it.Key} = {it.Value}").ToList();
-            var additionQueryStr = additionQuery.Count > 0 ? $" AND {string.Join(" AND ", additionQuery)}" : "";
-            foreach (var itemType in itemTypes)
-            {
-                var results = await index.SearchAsync<MeilisearchItem>(
-                    searchTerm,
-                    new SearchQuery
-                    {
-                        Filter = $"type = \"{itemType}\" {additionQueryStr}",
-                        Limit = limitPerType,
-                        AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
-                    }
-                );
-                items.AddRange(results.Hits);
-            }
+            var additionQueryStr = string.Join(" AND ", additionQuery);
+            var itemTypeFilter = itemTypes.Select(it => $"type = \"{it}\"").ToList();
+            var itemTypeFilterStr = string.Join(" OR ", itemTypeFilter);
+
+            var filter = string.Empty;
+            if (additionQuery.Count > 0 && itemTypes.Count > 0) filter = $"({itemTypeFilterStr}) AND {additionQueryStr}";
+            else if (additionQuery.Count > 0) filter = additionQueryStr;
+            else if (itemTypes.Count > 0) filter = itemTypeFilterStr;
+
+            var totalLimit = limitPerType;
+            var results = await index.SearchAsync<MeilisearchItem>(
+                searchTerm,
+                new SearchQuery
+                {
+                    Filter = filter,
+                    Limit = totalLimit,
+                    AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
+                }
+            );
+            items.AddRange(results.Hits);
         }
         catch (MeilisearchCommunicationError e)
         {
@@ -246,13 +252,12 @@ public class MeilisearchMutateFilter(
             }
         }
 
+        //Default limit to 30 per type if it's not defined
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
-            : 0;
-        var limitPreItem = filteredTypes.Count > 0 && limit > 0
-            ? Math.Clamp(limit / filteredTypes.Count, 30, 100)
-            : 30;
-        var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limitPreItem);
+            : 30 * filteredTypes.Count;
+
+        var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limit);
 
         // remove items that are not visible to the user
         var items = meilisearchItems.Select(it =>
