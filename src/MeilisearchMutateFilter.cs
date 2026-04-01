@@ -129,7 +129,7 @@ public class MeilisearchMutateFilter(
         string searchTerm,
         List<string> itemTypes,
         List<KeyValuePair<string, string>> additionalFilters,
-        int limitPerType
+        int totalLimit
     )
     {
         List<MeilisearchItem> items = [];
@@ -150,7 +150,7 @@ public class MeilisearchMutateFilter(
                 new SearchQuery
                 {
                     Filter = filter,
-                    Limit = limitPerType,
+                    Limit = totalLimit,
                     AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
                 }
             );
@@ -251,13 +251,12 @@ public class MeilisearchMutateFilter(
             }
         }
 
+        //Default limit to 30 per type if it's not defined
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)
             ? (int)limitObj!
-            : 0;
-        var limitPreItem = filteredTypes.Count > 0 && limit > 0
-            ? Math.Clamp(limit / filteredTypes.Count, 30, 100)
-            : 30;
-        var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limitPreItem);
+            : 30 * filteredTypes.Count;
+
+        var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limit);
 
         // remove items that are not visible to the user
         var items = meilisearchItems.Select(it =>
