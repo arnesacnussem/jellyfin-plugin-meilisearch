@@ -35,7 +35,7 @@ jobs:
         run: |-
           echo "set version to ${GITHUB_REF#refs/tags/}"
           sed -i "s/version: .*/version: '${GITHUB_REF#refs/tags/}'/" ./src/build.yaml
-          
+
           PREV_TAG=$(git describe --tags --abbrev=0 @^ 2>/dev/null || echo "")
           if [ -n "$PREV_TAG" ]; then
             COMMIT_RANGE="${PREV_TAG}..@"
@@ -45,7 +45,7 @@ jobs:
             echo "no previous tag found, generating changelog from all commits"
             CHANGELOG=$(git log --oneline --pretty=format:"- [%h] %s")
           fi
-          
+
           sed -i 's/changelog: changelog/changelog: |-\n/' ./src/build.yaml
           echo -e "$CHANGELOG" | sed 's/^/  /' >> ./src/build.yaml
           mkdir -p ./artifacts
@@ -118,13 +118,13 @@ jobs:
           echo "::group::Installing JPRM"
           python3 -m pip install jprm
           echo "::endgroup::"
-          
+
           RELEASE_TAG="${GITHUB_REF#refs/tags/}"
           echo "set release tag to ${RELEASE_TAG}, get release info..."
           RELEASE_INFO=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/tags/${RELEASE_TAG}")
           DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | test("\\.zip$")) | .browser_download_url')
           echo "download url: ${DOWNLOAD_URL}"
-          
+
           echo "::group::Updating manifest.json"
           jprm repo add ./manifest.json "$(ls -d *.zip)" -u "${DOWNLOAD_URL}" -U "${DOWNLOAD_URL}"
           echo "::endgroup::"
