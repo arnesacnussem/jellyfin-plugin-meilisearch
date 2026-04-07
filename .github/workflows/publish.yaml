@@ -139,7 +139,8 @@ jobs:
         run: |-
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -a -m "Update manifest.json for release ${GITHUB_REF#refs/tags/}"
+          git add manifest.json
+          git commit -m "Update manifest.json for release ${GITHUB_REF#refs/tags/}"
 
       - name: Push changes
         uses: ad-m/github-push-action@77c5b412c50b723d2a4fbc6d71fb5723bcd439aa # v1.0.0
