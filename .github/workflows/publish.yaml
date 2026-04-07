@@ -119,6 +119,12 @@ jobs:
           python3 -m pip install jprm
           echo "::endgroup::"
 
+          # Initialize manifest.json if it doesn't exist
+          if [ ! -f ./manifest.json ]; then
+            echo "manifest.json not found, initializing repository..."
+            jprm repo init ./manifest.json
+          fi
+
           RELEASE_TAG="${GITHUB_REF#refs/tags/}"
           echo "set release tag to ${RELEASE_TAG}, get release info..."
           RELEASE_INFO=$(curl -s "https://api.github.com/repos/${{ github.repository }}/releases/tags/${RELEASE_TAG}")
