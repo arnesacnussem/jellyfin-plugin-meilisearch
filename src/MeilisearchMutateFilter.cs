@@ -38,43 +38,7 @@ public class MeilisearchMutateFilter(
     IDtoService dtoService
 ) : IAsyncActionFilter
 {
-    // Build the Jellyfin type map dynamically
-    private IReadOnlyDictionary<string, string> JellyfinTypeMap { get; } = new Dictionary<string, string>()
-    {
-        { "AggregateFolder", typeof(AggregateFolder).FullName! },
-        { "Audio", typeof(Audio).FullName! },
-        { "AudioBook", typeof(AudioBook).FullName! },
-        { "BasePluginFolder", typeof(BasePluginFolder).FullName! },
-        { "Book", typeof(Book).FullName! },
-        { "BoxSet", typeof(BoxSet).FullName! },
-        { "Channel", typeof(Channel).FullName! },
-        { "CollectionFolder", typeof(CollectionFolder).FullName! },
-        { "Episode", typeof(Episode).FullName! },
-        { "Folder", typeof(Folder).FullName! },
-        { "Genre", typeof(Genre).FullName! },
-        { "Movie", typeof(Movie).FullName! },
-        { "LiveTvChannel", typeof(LiveTvChannel).FullName! },
-        { "LiveTvProgram", typeof(LiveTvProgram).FullName! },
-        { "MusicAlbum", typeof(MusicAlbum).FullName! },
-        { "MusicArtist", typeof(MusicArtist).FullName! },
-        { "MusicGenre", typeof(MusicGenre).FullName! },
-        { "MusicVideo", typeof(MusicVideo).FullName! },
-        { "Person", typeof(Person).FullName! },
-        { "Photo", typeof(Photo).FullName! },
-        { "PhotoAlbum", typeof(PhotoAlbum).FullName! },
-        { "Playlist", typeof(Playlist).FullName! },
-        { "PlaylistsFolder", "Emby.Server.Implementations.Playlists.PlaylistsFolder" },
-        { "Season", typeof(Season).FullName! },
-        { "Series", typeof(Series).FullName! },
-        { "Studio", typeof(Studio).FullName! },
-        { "Trailer", typeof(Trailer).FullName! },
-        { "TvChannel", typeof(LiveTvChannel).FullName! },
-        { "TvProgram", typeof(LiveTvProgram).FullName! },
-        { "UserRootFolder", typeof(UserRootFolder).FullName! },
-        { "UserView", typeof(UserView).FullName! },
-        { "Video", typeof(Video).FullName! },
-        { "Year", typeof(Year).FullName! }
-    }.ToFrozenDictionary();
+    private IReadOnlyDictionary<string, string> JellyfinTypeMap => TypeHelper.JellyfinTypeMap;
 
     /// <summary>
     /// check if the user is api key https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Extensions/ClaimsPrincipalExtensions.cs #GetIsApiKey
@@ -228,12 +192,11 @@ public class MeilisearchMutateFilter(
             }
         }
 
-        // Default to common types if no types were specified
+        // Default to configured types if no types were specified
         if (filteredTypes.Count == 0)
         {
-            // Use TryGetValue for safer access to JellyfinTypeMap
-            var defaultTypeKeys = new[] { "Movie", "Episode", "Series", "Person" };
-            foreach (var key in defaultTypeKeys)
+            var configIncludedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
+            foreach (var key in configIncludedTypes)
             {
                 if (JellyfinTypeMap.TryGetValue(key, out var typeValue))
                 {
@@ -244,6 +207,17 @@ public class MeilisearchMutateFilter(
                     logger.LogWarning("JellyfinTypeMap is missing expected key: {key}", key);
                 }
             }
+        }
+        else
+        {
+            // If types WERE specified, we still filter them by the configured included types
+            var configIncludedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
+            var configFullNames = configIncludedTypes
+                .Select(key => JellyfinTypeMap.TryGetValue(key, out var typeValue) ? typeValue : null)
+                .Where(it => it != null)
+                .ToImmutableHashSet();
+            
+            filteredTypes = filteredTypes.Where(it => configFullNames.Contains(it)).ToList();
         }
 
         var limit = context.ActionArguments.TryGetValue("limit", out var limitObj)

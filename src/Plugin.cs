@@ -82,7 +82,9 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var config = (Config)configuration;
-        var skipReload = Configuration.Url == config.Url && Configuration.ApiKey == config.ApiKey;
+        var skipReload = Configuration.Url == config.Url && 
+                        Configuration.ApiKey == config.ApiKey &&
+                        Configuration.IncludedItemTypes.SequenceEqual(config.IncludedItemTypes);
 
         Configuration = config;
         SaveConfiguration(Configuration);
