@@ -10,6 +10,11 @@ public class Config : BasePluginConfiguration
         "studios", "overview", "path", "tagline"
     ];
 
+    public static readonly string[] DefaultIncludedItemTypes =
+    [
+        "Movie", "Series", "Season", "Episode", "Person", "Genre", "Studio", "BoxSet", "Playlist", "Year"
+    ];
+
     public Config()
     {
         ApiKey = string.Empty;
@@ -17,6 +22,7 @@ public class Config : BasePluginConfiguration
         Debug = false;
         IndexName = string.Empty;
         AttributesToSearchOn = DefaultAttributesToSearchOn;
+        IncludedItemTypes = DefaultIncludedItemTypes;
         FallbackToJellyfin = false;
     }
 
@@ -26,5 +32,6 @@ public class Config : BasePluginConfiguration
     public bool Debug { get; set; }
     public string IndexName { get; set; }
     public string[] AttributesToSearchOn { get; set; }
+    public string[] IncludedItemTypes { get; set; }
     public bool FallbackToJellyfin { get; set; }
 }

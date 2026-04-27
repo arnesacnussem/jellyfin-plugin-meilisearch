@@ -105,11 +105,15 @@
                 <div>
                     <span>Search by following fields</span>
                     <div id="checkbox-list"></div>
-                    <div>
-                        <button class="raised button-submit block emby-button" is="emby-button" type="submit">
-                            <span>Save</span>
-                        </button>
-                    </div>
+                </div>
+                <div style="margin-top: 16px">
+                    <span>Included Item Types</span>
+                    <div id="type-checkbox-list"></div>
+                </div>
+                <div>
+                    <button class="raised button-submit block emby-button" is="emby-button" type="submit">
+                        <span>Save</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -123,15 +127,22 @@
                 "studios", "overview", "path",
                 "tagline"
             ]
-            const generateCheckboxList = (checked) => {
-                const checkboxList = document.getElementById("checkbox-list");
-                allSearchableFields.forEach(item => {
+            const allItemTypes = [
+                "Audio", "AudioBook", "Book", "BoxSet", "Episode", "Genre",
+                "Movie", "MusicAlbum", "MusicArtist", "MusicGenre", "MusicVideo",
+                "Person", "Photo", "Playlist", "Season", "Series", "Studio",
+                "Trailer", "Video", "Year"
+            ]
+            const generateCheckboxList = (containerId, items, prefix, checked) => {
+                const checkboxList = document.getElementById(containerId);
+                checkboxList.innerHTML = '';
+                items.forEach(item => {
                     const label = document.createElement("label");
                     label.classList.add("emby-checkbox-label");
 
                     const input = document.createElement("input");
                     input.type = "checkbox";
-                    input.id = "chk-search-" + item;
+                    input.id = prefix + item;
                     input.setAttribute("data-embycheckbox", "true");
                     input.classList.add("emby-checkbox");
                     input.checked = checked.includes(item);
@@ -162,10 +173,10 @@
                 })
             }
 
-            const getSelectedSearchableFields = () => {
+            const getSelectedFields = (items, prefix) => {
                 const fields = [];
-                allSearchableFields.forEach(item => {
-                    const input = document.getElementById("chk-search-" + item);
+                items.forEach(item => {
+                    const input = document.getElementById(prefix + item);
                     if (input.checked) {
                         fields.push(item);
                     }
@@ -222,7 +233,8 @@
                         document.querySelector('#Debug').checked = config.Debug;
                         document.querySelector('#IndexName').value = config.IndexName;
                         document.querySelector('#Fallback').checked = config.FallbackToJellyfin;
-                        generateCheckboxList(config.AttributesToSearchOn)
+                        generateCheckboxList("checkbox-list", allSearchableFields, "chk-search-", config.AttributesToSearchOn)
+                        generateCheckboxList("type-checkbox-list", allItemTypes, "chk-type-", config.IncludedItemTypes || [])
                         Dashboard.hideLoadingMsg();
                     });
                     updateStatus('status');
@@ -236,7 +248,8 @@
                         config.ApiKey = document.querySelector('#ApiKey').value;
                         config.Debug = document.querySelector('#Debug').checked;
                         config.IndexName = document.querySelector('#IndexName').value;
-                        config.AttributesToSearchOn = getSelectedSearchableFields();
+                        config.AttributesToSearchOn = getSelectedFields(allSearchableFields, "chk-search-");
+                        config.IncludedItemTypes = getSelectedFields(allItemTypes, "chk-type-");
                         config.FallbackToJellyfin = document.querySelector('#Fallback').checked;
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
