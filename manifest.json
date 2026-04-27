@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.11",
+                "changelog": "- [de593e5] ci(deps): bump actions/upload-artifact from 7.0.0 to 7.0.1 (#107)\n- [e120910] ci(deps): bump ad-m/github-push-action from 1.0.0 to 1.1.0 (#108)\n- [1064e0a] ci(deps): bump actions/download-artifact from 8.0.0 to 8.0.1 (#104)\n- [8f43a19] ci(deps): bump ncipollo/release-action from 1.20.0 to 1.21.0 (#105)\n- [4db069b] ci(deps): bump actions/setup-dotnet from 5.1.0 to 5.2.0 (#103)\n- [f346ede] ci(deps): bump actions/upload-artifact from 6.0.0 to 7.0.0 (#101)\n- [a43dedc] ci(deps): bump actions/download-artifact from 7.0.0 to 8.0.0 (#102)\n- [c51c0e9] refactor(db): use async query and dispose DbContext properly",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.11/meilisearch_1.11.1.11.zip",
+                "checksum": "9677c6b2c8e22e058b50f677cc94a250",
+                "timestamp": "2026-04-27T10:08:47Z"
+            },
+            {
                 "version": "1.11.1.10",
                 "changelog": "- [2fad775] docs: Setup/usage instructions, clarify, provide examples (#92)\n- [a3c4ca9] ci(deps): bump actions/checkout from 6.0.1 to 6.0.2 (#90)\n- [b3cafe1] feat: add default search types when none specified (#73)\n- [66dc487] ci(deps): Bump actions/setup-dotnet from 5.0.1 to 5.1.0 (#87)\n- [79de4f9] chore: add VSCode configuration files for extensions and settings\n- [907251d] refactor: remove workaround for URL constructor in Meilisearch plugin\n- [a8b531e] chore: update .gitignore to include .vs/ directory",
                 "targetAbi": "10.11.0.0",
