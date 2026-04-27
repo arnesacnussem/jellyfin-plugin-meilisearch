@@ -28,17 +28,15 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
 
         // Filter by configuration
         var includedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
+        if (includedTypes.Length == 0) includedTypes = Config.DefaultIncludedItemTypes;
         var includedFullNames = includedTypes
             .Select(key => TypeHelper.JellyfinTypeMap.TryGetValue(key, out var typeValue) ? typeValue : null)
             .Where(it => it != null)
             .ToHashSet();
 
-        if (includedFullNames.Count > 0)
-        {
-            var originalCount = items.Count;
-            items = items.Where(it => it.Type == null || includedFullNames.Contains(it.Type)).ToImmutableList();
-            logger.LogInformation("Filtered items by type: {BEFORE} -> {AFTER}", originalCount, items.Count);
-        }
+        var originalCount = items.Count;
+        items = items.Where(it => it.Type != null && includedFullNames.Contains(it.Type)).ToImmutableList();
+        logger.LogInformation("Filtered items by type: {BEFORE} -> {AFTER}", originalCount, items.Count);
 
         if (items.Count <= 0)
         {

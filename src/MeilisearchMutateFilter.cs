@@ -192,10 +192,12 @@ public class MeilisearchMutateFilter(
             }
         }
 
+        var configIncludedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
+        if (configIncludedTypes.Length == 0) configIncludedTypes = Config.DefaultIncludedItemTypes;
+
         // Default to configured types if no types were specified
         if (filteredTypes.Count == 0)
         {
-            var configIncludedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
             foreach (var key in configIncludedTypes)
             {
                 if (JellyfinTypeMap.TryGetValue(key, out var typeValue))
@@ -210,13 +212,12 @@ public class MeilisearchMutateFilter(
         }
         else
         {
-            // If types WERE specified, we still filter them by the configured included types
-            var configIncludedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
+            // If types WERE specified, filter them by the configured included types
             var configFullNames = configIncludedTypes
                 .Select(key => JellyfinTypeMap.TryGetValue(key, out var typeValue) ? typeValue : null)
                 .Where(it => it != null)
                 .ToImmutableHashSet();
-            
+
             filteredTypes = filteredTypes.Where(it => configFullNames.Contains(it)).ToList();
         }
 
