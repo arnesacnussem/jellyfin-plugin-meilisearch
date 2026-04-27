@@ -259,7 +259,7 @@ public class MeilisearchMutateFilter(
         {
             var item = libraryManager.GetItemById(Guid.Parse(it.Guid));
             return (item?.IsVisibleStandalone(user) ?? false) ? item : null;
-        }).Where(it => it is not null).DistinctBy(it => it!.Id)!.ToImmutableList<BaseItem>();
+        }).Where(it => it is not null).Cast<BaseItem>().DistinctBy(it => it.Id).ToImmutableList();
 
 
         var notFallback = !(Plugin.Instance?.Configuration.FallbackToJellyfin ?? false);
