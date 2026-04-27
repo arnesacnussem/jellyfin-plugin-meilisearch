@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Channels;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
@@ -47,4 +48,9 @@ public static class TypeHelper
         { "Video", typeof(Video).FullName! },
         { "Year", typeof(Year).FullName! }
     }.ToFrozenDictionary();
+
+    public static FrozenSet<string> TypeFullNames { get; } = JellyfinTypeMap.Values.ToFrozenSet();
+
+    public static IEnumerable<string> MapTypeKeys(IEnumerable<BaseItemKind> keys) =>
+        keys.Select(k => JellyfinTypeMap.TryGetValue(k.ToString(), out var v) ? v : null).OfType<string>();
 }

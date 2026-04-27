@@ -23,9 +23,6 @@ public class MeilisearchRepositoryDecorator(
 
         var ids = Task.Run(() => SearchAsync(filter)).GetAwaiter().GetResult();
 
-        if (ids.Count == 0 && (Plugin.Instance?.Configuration.FallbackToJellyfin ?? false))
-            return inner.GetItems(filter);
-
         if (ids.Count == 0)
             return new QueryResult<BaseItem> { TotalRecordCount = 0, Items = [] };
 
@@ -41,7 +38,6 @@ public class MeilisearchRepositoryDecorator(
 
         var limit = filter.Limit is > 0 ? filter.Limit.Value : 30;
         var limitPerType = Math.Clamp(limit / types.Count, 30, 100);
-        var attributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn;
         try
         {
             var tasks = types.Select(type => clientHolder.Index!.SearchAsync<MeilisearchItem>(
@@ -50,7 +46,6 @@ public class MeilisearchRepositoryDecorator(
                 {
                     Filter = $"type = \"{type}\"",
                     Limit = limitPerType,
-                    AttributesToSearchOn = attributesToSearchOn
                 }
             ));
             var results = await Task.WhenAll(tasks);
@@ -69,33 +64,21 @@ public class MeilisearchRepositoryDecorator(
 
     private static List<string> BuildTypeList(InternalItemsQuery filter)
     {
-        var configuredTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
-        if (configuredTypes.Length == 0) configuredTypes = Config.DefaultIncludedItemTypes;
-        var configuredFullNames = configuredTypes
-            .Select(k => TypeHelper.JellyfinTypeMap.TryGetValue(k, out var v) ? v : null)
-            .OfType<string>()
-            .ToHashSet();
-
         List<string> types;
         if (filter.IncludeItemTypes is { Length: > 0 })
         {
-            types = filter.IncludeItemTypes
-                .Select(k => TypeHelper.JellyfinTypeMap.TryGetValue(k.ToString(), out var v) ? v : null)
-                .OfType<string>()
-                .Where(configuredFullNames.Contains)
+            types = TypeHelper.MapTypeKeys(filter.IncludeItemTypes)
+                .Where(TypeHelper.TypeFullNames.Contains)
                 .ToList();
         }
         else
         {
-            types = [.. configuredFullNames];
+            types = [.. TypeHelper.TypeFullNames];
         }
 
         if (filter.ExcludeItemTypes is { Length: > 0 })
         {
-            var excludeNames = filter.ExcludeItemTypes
-                .Select(k => TypeHelper.JellyfinTypeMap.TryGetValue(k.ToString(), out var v) ? v : null)
-                .OfType<string>()
-                .ToHashSet();
+            var excludeNames = TypeHelper.MapTypeKeys(filter.ExcludeItemTypes).ToHashSet();
             types.RemoveAll(excludeNames.Contains);
         }
 

@@ -7,6 +7,12 @@ namespace Jellyfin.Plugin.Meilisearch;
 
 public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IServerApplicationHost applicationHost)
 {
+    private static readonly string[] SearchableAttributes =
+    [
+        "name", "artists", "albumArtists", "originalTitle", "productionYear", "seriesName", "genres", "tags",
+        "studios", "overview", "path", "tagline"
+    ];
+
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
     private volatile Config? _lastConfiguration;
 
@@ -43,7 +49,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
     public async Task Set(Config configuration)
     {
         _lastConfiguration = configuration;
-        if (string.IsNullOrEmpty(configuration.Url) && 
+        if (string.IsNullOrEmpty(configuration.Url) &&
             string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MEILI_URL")))
         {
             logger.LogWarning("Missing Meilisearch URL");
@@ -64,7 +70,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
             // Check for environment variable first
             var envURL = Environment.GetEnvironmentVariable("MEILI_URL");
             // Use URL from config if env var is not set
-            var url = string.IsNullOrEmpty(envURL) 
+            var url = string.IsNullOrEmpty(envURL)
                 ? (string.IsNullOrEmpty(configuration.Url) ? null : configuration.Url)
                 : envURL;
             Client = new MeilisearchClient(url, apiKey);
@@ -114,8 +120,8 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
             ["communityRating", "criticRating"]
         );
 
-        await index.UpdateSearchableAttributesAsync(Config.DefaultAttributesToSearchOn);
-        await index.UpdateDisplayedAttributesAsync(Config.DefaultAttributesToSearchOn.Concat(["guid", "type"]));
+        await index.UpdateSearchableAttributesAsync(SearchableAttributes);
+        await index.UpdateDisplayedAttributesAsync(SearchableAttributes.Concat(["guid", "type"]));
 
         // Set ranking rules to add critic rating
         await index.UpdateRankingRulesAsync(

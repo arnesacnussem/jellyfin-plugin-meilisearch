@@ -24,14 +24,7 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
 
     private async Task IndexInternal(MeilisearchClient meilisearchClient, Index index)
     {
-        var includedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
-        if (includedTypes.Length == 0) includedTypes = Config.DefaultIncludedItemTypes;
-        var includedFullNames = includedTypes
-            .Select(key => TypeHelper.JellyfinTypeMap.TryGetValue(key, out var typeValue) ? typeValue : null)
-            .OfType<string>()
-            .ToHashSet();
-
-        var items = await GetItems(includedFullNames);
+        var items = await GetItems(TypeHelper.TypeFullNames);
 
         if (items.Count <= 0)
         {
