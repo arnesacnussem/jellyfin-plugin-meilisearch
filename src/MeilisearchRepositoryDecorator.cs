@@ -16,42 +16,60 @@ public class MeilisearchRepositoryDecorator(
     ILogger<MeilisearchRepositoryDecorator> logger
 ) : IItemRepository
 {
+    private sealed record SearchResultData(IReadOnlyList<Guid> OrderedIds, int TotalCount);
+
     public QueryResult<BaseItem> GetItems(InternalItemsQuery filter)
     {
-        if (string.IsNullOrEmpty(filter.SearchTerm) || !clientHolder.Ok || clientHolder.Index == null)
+        var searchResult = RunSearch(filter);
+        if (ShouldFallbackToInnerSearch(searchResult))
             return inner.GetItems(filter);
 
-        // IItemRepository.GetItems is synchronous; Task.Run avoids a deadlock by running
-        // SearchAsync on a thread-pool thread without an ASP.NET SynchronizationContext.
-        var ids = Task.Run(() => SearchAsync(filter)).GetAwaiter().GetResult();
-
-        if (ids.Count == 0)
-            return inner.GetItems(filter); // fall back to Jellyfin native search
-
-        filter.ItemIds = [.. ids];
-        filter.SearchTerm = null;
-        return inner.GetItems(filter);
+        var materialized = MaterializeItems(filter, searchResult!);
+        return new QueryResult<BaseItem>(
+            filter.StartIndex,
+            searchResult!.TotalCount,
+            materialized);
     }
 
-    private async Task<IReadOnlyList<Guid>> SearchAsync(InternalItemsQuery filter)
+    private SearchResultData? RunSearch(InternalItemsQuery filter)
     {
+        var searchTerm = filter.SearchTerm;
         var types = BuildTypeList(filter);
-        if (types.Count == 0) return [];
+        if (string.IsNullOrWhiteSpace(searchTerm)
+            || !clientHolder.Ok
+            || clientHolder.Index is null
+            || types.Count == 0)
+        {
+            return null;
+        }
 
-        var limit = Math.Max(filter.Limit is > 0 ? filter.Limit.Value : 30, 1);
-        var typeFilter = string.Join(" OR ", types.Select(t => $"type = \"{t}\""));
+        // Jellyfin calls into this repository synchronously. Running the external async search
+        // on a thread-pool thread reduces sync-over-async deadlock risk at this boundary.
+        return Task.Run(() => SearchAsync(searchTerm, filter, types)).GetAwaiter().GetResult();
+    }
+
+    private async Task<SearchResultData?> SearchAsync(string searchTerm, InternalItemsQuery filter, IReadOnlyList<string> types)
+    {
+        var index = clientHolder.Index;
+        if (!clientHolder.Ok || index is null)
+            return null;
+
         try
         {
             var matchingStrategy = Plugin.Instance?.Configuration.MatchingStrategy ?? "last";
-            var result = await clientHolder.Index!.SearchAsync<MeilisearchItem>(
-                filter.SearchTerm,
+            var limit = Math.Max(filter.Limit is > 0 ? filter.Limit.Value : 30, 1);
+            var typeFilter = string.Join(" OR ", types.Select(t => $"type = \"{t}\""));
+            var result = await index.SearchAsync<MeilisearchItem>(
+                searchTerm,
                 new SearchQuery
                 {
                     Filter = typeFilter,
+                    Offset = filter.StartIndex ?? 0,
                     Limit = limit,
                     MatchingStrategy = matchingStrategy,
                 }
-            );
+            ).ConfigureAwait(false);
+
             List<Guid> ids = [];
             foreach (var hit in result.Hits)
             {
@@ -60,14 +78,182 @@ public class MeilisearchRepositoryDecorator(
                 else
                     logger.LogWarning("Skipping Meilisearch hit with invalid GUID '{Guid}'", hit.Guid);
             }
-            return ids;
+
+            var totalCount = result is SearchResult<MeilisearchItem> searchResult
+                ? searchResult.EstimatedTotalHits
+                : ids.Count;
+            return new SearchResultData(ids, totalCount);
         }
         catch (MeilisearchCommunicationError e)
         {
             logger.LogError(e, "Meilisearch communication error");
             clientHolder.Unset();
-            return [];
+            return null;
         }
+    }
+
+    private IReadOnlyList<BaseItem> MaterializeItems(InternalItemsQuery filter, SearchResultData searchResult)
+    {
+        var materializedFilter = CreateMaterializedFilter(filter, searchResult.OrderedIds);
+        var items = inner.GetItemList(materializedFilter);
+        return ReorderItems(items, searchResult.OrderedIds);
+    }
+
+    private static bool ShouldFallbackToInnerSearch(SearchResultData? searchResult)
+        => searchResult is null || searchResult.OrderedIds.Count == 0;
+
+    private static InternalItemsQuery CreateMaterializedFilter(InternalItemsQuery filter, IReadOnlyList<Guid> orderedIds)
+    {
+        return new InternalItemsQuery(filter.User)
+        {
+            Recursive = filter.Recursive,
+            StartIndex = null,
+            Limit = null,
+            IsFolder = filter.IsFolder,
+            IsFavorite = filter.IsFavorite,
+            IsFavoriteOrLiked = filter.IsFavoriteOrLiked,
+            IsLiked = filter.IsLiked,
+            IsPlayed = filter.IsPlayed,
+            IsResumable = filter.IsResumable,
+            IncludeItemsByName = filter.IncludeItemsByName,
+            MediaTypes = filter.MediaTypes,
+            IncludeItemTypes = filter.IncludeItemTypes,
+            ExcludeItemTypes = filter.ExcludeItemTypes,
+            ExcludeTags = filter.ExcludeTags,
+            ExcludeInheritedTags = filter.ExcludeInheritedTags,
+            IncludeInheritedTags = filter.IncludeInheritedTags,
+            Genres = filter.Genres,
+            IsSpecialSeason = filter.IsSpecialSeason,
+            IsMissing = filter.IsMissing,
+            IsUnaired = filter.IsUnaired,
+            CollapseBoxSetItems = filter.CollapseBoxSetItems,
+            NameStartsWithOrGreater = filter.NameStartsWithOrGreater,
+            NameStartsWith = filter.NameStartsWith,
+            NameLessThan = filter.NameLessThan,
+            NameContains = filter.NameContains,
+            MinSortName = filter.MinSortName,
+            PresentationUniqueKey = filter.PresentationUniqueKey,
+            Path = filter.Path,
+            Name = filter.Name,
+            UseRawName = filter.UseRawName,
+            Person = filter.Person,
+            PersonIds = filter.PersonIds,
+            ItemIds = [.. orderedIds],
+            ExcludeItemIds = filter.ExcludeItemIds,
+            AdjacentTo = filter.AdjacentTo,
+            PersonTypes = filter.PersonTypes,
+            Is3D = filter.Is3D,
+            IsHD = filter.IsHD,
+            IsLocked = filter.IsLocked,
+            IsPlaceHolder = filter.IsPlaceHolder,
+            HasImdbId = filter.HasImdbId,
+            HasOverview = filter.HasOverview,
+            HasTmdbId = filter.HasTmdbId,
+            HasOfficialRating = filter.HasOfficialRating,
+            HasTvdbId = filter.HasTvdbId,
+            HasThemeSong = filter.HasThemeSong,
+            HasThemeVideo = filter.HasThemeVideo,
+            HasSubtitles = filter.HasSubtitles,
+            HasSpecialFeature = filter.HasSpecialFeature,
+            HasTrailer = filter.HasTrailer,
+            HasParentalRating = filter.HasParentalRating,
+            StudioIds = filter.StudioIds,
+            GenreIds = filter.GenreIds,
+            ImageTypes = filter.ImageTypes,
+            VideoTypes = filter.VideoTypes,
+            BlockUnratedItems = filter.BlockUnratedItems,
+            Years = filter.Years,
+            Tags = filter.Tags,
+            OfficialRatings = filter.OfficialRatings,
+            MinPremiereDate = filter.MinPremiereDate,
+            MaxPremiereDate = filter.MaxPremiereDate,
+            MinStartDate = filter.MinStartDate,
+            MaxStartDate = filter.MaxStartDate,
+            MinEndDate = filter.MinEndDate,
+            MaxEndDate = filter.MaxEndDate,
+            IsAiring = filter.IsAiring,
+            IsMovie = filter.IsMovie,
+            IsSports = filter.IsSports,
+            IsKids = filter.IsKids,
+            IsNews = filter.IsNews,
+            IsSeries = filter.IsSeries,
+            MinIndexNumber = filter.MinIndexNumber,
+            MinParentAndIndexNumber = filter.MinParentAndIndexNumber,
+            AiredDuringSeason = filter.AiredDuringSeason,
+            MinCriticRating = filter.MinCriticRating,
+            MinCommunityRating = filter.MinCommunityRating,
+            ChannelIds = filter.ChannelIds,
+            ParentIndexNumber = filter.ParentIndexNumber,
+            ParentIndexNumberNotEquals = filter.ParentIndexNumberNotEquals,
+            IndexNumber = filter.IndexNumber,
+            MinParentalRating = filter.MinParentalRating,
+            MaxParentalRating = filter.MaxParentalRating,
+            HasDeadParentId = filter.HasDeadParentId,
+            IsVirtualItem = filter.IsVirtualItem,
+            ParentId = filter.ParentId,
+            ParentType = filter.ParentType,
+            AncestorIds = filter.AncestorIds,
+            TopParentIds = filter.TopParentIds,
+            PresetViews = filter.PresetViews,
+            TrailerTypes = filter.TrailerTypes,
+            SourceTypes = filter.SourceTypes,
+            SeriesStatuses = filter.SeriesStatuses,
+            ExternalSeriesId = filter.ExternalSeriesId,
+            ExternalId = filter.ExternalId,
+            AlbumIds = filter.AlbumIds,
+            ArtistIds = filter.ArtistIds,
+            ExcludeArtistIds = filter.ExcludeArtistIds,
+            AncestorWithPresentationUniqueKey = filter.AncestorWithPresentationUniqueKey,
+            SeriesPresentationUniqueKey = filter.SeriesPresentationUniqueKey,
+            GroupByPresentationUniqueKey = filter.GroupByPresentationUniqueKey,
+            GroupBySeriesPresentationUniqueKey = filter.GroupBySeriesPresentationUniqueKey,
+            EnableTotalRecordCount = false,
+            ForceDirect = filter.ForceDirect,
+            ExcludeProviderIds = filter.ExcludeProviderIds,
+            EnableGroupByMetadataKey = filter.EnableGroupByMetadataKey,
+            HasChapterImages = filter.HasChapterImages,
+            OrderBy = filter.OrderBy,
+            MinDateCreated = filter.MinDateCreated,
+            MinDateLastSaved = filter.MinDateLastSaved,
+            MinDateLastSavedForUser = filter.MinDateLastSavedForUser,
+            DtoOptions = filter.DtoOptions,
+            HasNoAudioTrackWithLanguage = filter.HasNoAudioTrackWithLanguage,
+            HasNoInternalSubtitleTrackWithLanguage = filter.HasNoInternalSubtitleTrackWithLanguage,
+            HasNoExternalSubtitleTrackWithLanguage = filter.HasNoExternalSubtitleTrackWithLanguage,
+            HasNoSubtitleTrackWithLanguage = filter.HasNoSubtitleTrackWithLanguage,
+            IsDeadArtist = filter.IsDeadArtist,
+            IsDeadStudio = filter.IsDeadStudio,
+            IsDeadGenre = filter.IsDeadGenre,
+            IsDeadPerson = filter.IsDeadPerson,
+            DisplayAlbumFolders = filter.DisplayAlbumFolders,
+            HasAnyProviderId = filter.HasAnyProviderId,
+            AlbumArtistIds = filter.AlbumArtistIds,
+            BoxSetLibraryFolders = filter.BoxSetLibraryFolders,
+            ContributingArtistIds = filter.ContributingArtistIds,
+            HasAired = filter.HasAired,
+            HasOwnerId = filter.HasOwnerId,
+            Is4K = filter.Is4K,
+            MaxHeight = filter.MaxHeight,
+            MaxWidth = filter.MaxWidth,
+            MinHeight = filter.MinHeight,
+            MinWidth = filter.MinWidth,
+            SearchTerm = null,
+            SeriesTimerId = filter.SeriesTimerId,
+            SkipDeserialization = filter.SkipDeserialization
+        };
+    }
+
+    private static IReadOnlyList<BaseItem> ReorderItems(IReadOnlyList<BaseItem> items, IReadOnlyList<Guid> orderedIds)
+    {
+        var itemsById = items.ToDictionary(item => item.Id);
+        var orderedItems = new List<BaseItem>(items.Count);
+        foreach (var id in orderedIds)
+        {
+            if (itemsById.TryGetValue(id, out var item))
+                orderedItems.Add(item);
+        }
+
+        return orderedItems;
     }
 
     private static List<string> BuildTypeList(InternalItemsQuery filter)
@@ -75,9 +261,7 @@ public class MeilisearchRepositoryDecorator(
         List<string> types;
         if (filter.IncludeItemTypes is { Length: > 0 })
         {
-            types = TypeHelper.MapTypeKeys(filter.IncludeItemTypes)
-                .Where(TypeHelper.TypeFullNames.Contains)
-                .ToList();
+            types = TypeHelper.MapTypeKeys(filter.IncludeItemTypes).ToList();
         }
         else
         {
@@ -98,10 +282,22 @@ public class MeilisearchRepositoryDecorator(
     public void SaveItems(IReadOnlyList<BaseItem> items, CancellationToken ct) => inner.SaveItems(items, ct);
     public void SaveImages(BaseItem item) => inner.SaveImages(item);
     public BaseItem? RetrieveItem(Guid id) => inner.RetrieveItem(id);
-    public int GetCount(InternalItemsQuery filter) => inner.GetCount(filter);
+    public int GetCount(InternalItemsQuery filter)
+    {
+        var searchResult = RunSearch(filter);
+        return ShouldFallbackToInnerSearch(searchResult)
+            ? inner.GetCount(filter)
+            : searchResult!.TotalCount;
+    }
     public ItemCounts GetItemCounts(InternalItemsQuery filter) => inner.GetItemCounts(filter);
     public IReadOnlyList<Guid> GetItemIdsList(InternalItemsQuery filter) => inner.GetItemIdsList(filter);
-    public IReadOnlyList<BaseItem> GetItemList(InternalItemsQuery filter) => inner.GetItemList(filter);
+    public IReadOnlyList<BaseItem> GetItemList(InternalItemsQuery filter)
+    {
+        var searchResult = RunSearch(filter);
+        return ShouldFallbackToInnerSearch(searchResult)
+            ? inner.GetItemList(filter)
+            : MaterializeItems(filter, searchResult!);
+    }
     public IReadOnlyList<BaseItem> GetLatestItemList(InternalItemsQuery filter, CollectionType ct) => inner.GetLatestItemList(filter, ct);
     public IReadOnlyList<string> GetNextUpSeriesKeys(InternalItemsQuery filter, DateTime dateCutoff) => inner.GetNextUpSeriesKeys(filter, dateCutoff);
     public QueryResult<(BaseItem Item, ItemCounts ItemCounts)> GetGenres(InternalItemsQuery filter) => inner.GetGenres(filter);
