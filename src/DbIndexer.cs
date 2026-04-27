@@ -34,7 +34,7 @@ public class DbIndexer(
                 Name, Overview, ProductionYear, Genres,
                 Studios, Tags, IsFolder, CriticRating,
                 OriginalTitle, SeriesName, Artists,
-                AlbumArtists, Path, Tagline
+                AlbumArtists, Path, Tagline, SortName
             FROM
                 BaseItems
             WHERE Type IN ({string.Join(", ", types.Select(x => $"@type{x.i}"))})
@@ -66,7 +66,8 @@ public class DbIndexer(
                 Artists: !reader.IsDBNull(14) ? reader.GetString(14).Split('|') : null,
                 AlbumArtists: !reader.IsDBNull(15) ? reader.GetString(15).Split('|') : null,
                 Path: path,
-                Tagline: !reader.IsDBNull(17) ? reader.GetString(17) : null
+                Tagline: !reader.IsDBNull(17) ? reader.GetString(17) : null,
+                SortName: !reader.IsDBNull(18) ? reader.GetString(18) : null
             ));
         }
 

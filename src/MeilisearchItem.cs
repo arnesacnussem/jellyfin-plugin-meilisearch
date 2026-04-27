@@ -18,5 +18,6 @@ public record MeilisearchItem(
     double? CommunityRating,
     double? CriticRating,
     string? Path,
-    string? Tagline
+    string? Tagline,
+    string? SortName
 );
