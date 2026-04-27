@@ -13,13 +13,12 @@ public class DbIndexer(
     MeilisearchClientHolder clientHolder,
     ILogger<DbIndexer> logger) : Indexer(clientHolder, logger)
 {
-    protected override async Task<ImmutableList<MeilisearchItem>> GetItems()
+    protected override async Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes)
     {
         var dbPath = Path.Combine(applicationPaths.DataPath, "jellyfin.db");
         Status["Database"] = dbPath;
         logger.LogInformation("Indexing items from database: {DB}", dbPath);
 
-        // Open Jellyfin library
         await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
             DataSource = dbPath,
@@ -27,25 +26,30 @@ public class DbIndexer(
         }.ToString());
         await connection.OpenAsync();
 
-        // Query all base items
         await using var command = connection.CreateCommand();
-        command.CommandText =
-            """
+        var paramNames = includedTypes.Select((_, i) => $"@type{i}").ToList();
+        command.CommandText = $"""
             SELECT
-                Id, Type, ParentId, CommunityRating, 
-                Name, Overview, ProductionYear, Genres, 
-                Studios, Tags, IsFolder, CriticRating, 
-                OriginalTitle, SeriesName, Artists, 
+                Id, Type, ParentId, CommunityRating,
+                Name, Overview, ProductionYear, Genres,
+                Studios, Tags, IsFolder, CriticRating,
+                OriginalTitle, SeriesName, Artists,
                 AlbumArtists, Path, Tagline
-            FROM 
+            FROM
                 BaseItems
+            WHERE Type IN ({string.Join(", ", paramNames)})
             """;
+        var typeList = includedTypes.ToList();
+        for (var i = 0; i < typeList.Count; i++)
+            command.Parameters.AddWithValue($"@type{i}", typeList[i]);
 
         await using var reader = await command.ExecuteReaderAsync();
         var items = new List<MeilisearchItem>();
         while (await reader.ReadAsync())
         {
-            var item = new MeilisearchItem(
+            var path = !reader.IsDBNull(16) ? reader.GetString(16) : null;
+            if (path?[0] == '%') path = null;
+            items.Add(new MeilisearchItem(
                 reader.GetGuid(0).ToString(),
                 !reader.IsDBNull(1) ? reader.GetString(1) : null,
                 !reader.IsDBNull(2) ? reader.GetString(2) : null,
@@ -62,11 +66,9 @@ public class DbIndexer(
                 SeriesName: !reader.IsDBNull(13) ? reader.GetString(13) : null,
                 Artists: !reader.IsDBNull(14) ? reader.GetString(14).Split('|') : null,
                 AlbumArtists: !reader.IsDBNull(15) ? reader.GetString(15).Split('|') : null,
-                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null,
+                Path: path,
                 Tagline: !reader.IsDBNull(17) ? reader.GetString(17) : null
-            );
-            if (item.Path?[0] == '%') item = item with { Path = null };
-            items.Add(item);
+            ));
         }
 
         return items.ToImmutableList();
