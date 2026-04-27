@@ -27,7 +27,7 @@ public class DbIndexer(
         await connection.OpenAsync();
 
         await using var command = connection.CreateCommand();
-        var paramNames = includedTypes.Select((_, i) => $"@type{i}").ToList();
+        var types = includedTypes.Select((t, i) => (t, i)).ToList();
         command.CommandText = $"""
             SELECT
                 Id, Type, ParentId, CommunityRating,
@@ -37,11 +37,10 @@ public class DbIndexer(
                 AlbumArtists, Path, Tagline
             FROM
                 BaseItems
-            WHERE Type IN ({string.Join(", ", paramNames)})
+            WHERE Type IN ({string.Join(", ", types.Select(x => $"@type{x.i}"))})
             """;
-        var typeList = includedTypes.ToList();
-        for (var i = 0; i < typeList.Count; i++)
-            command.Parameters.AddWithValue($"@type{i}", typeList[i]);
+        foreach (var (t, i) in types)
+            command.Parameters.AddWithValue($"@type{i}", t);
 
         await using var reader = await command.ExecuteReaderAsync();
         var items = new List<MeilisearchItem>();

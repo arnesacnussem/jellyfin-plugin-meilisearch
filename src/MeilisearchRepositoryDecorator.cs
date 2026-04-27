@@ -41,30 +41,30 @@ public class MeilisearchRepositoryDecorator(
 
         var limit = filter.Limit is > 0 ? filter.Limit.Value : 30;
         var limitPerType = Math.Clamp(limit / types.Count, 30, 100);
-        List<Guid> ids = [];
+        var attributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn;
         try
         {
-            foreach (var type in types)
-            {
-                var results = await clientHolder.Index!.SearchAsync<MeilisearchItem>(
-                    filter.SearchTerm,
-                    new SearchQuery
-                    {
-                        Filter = $"type = \"{type}\"",
-                        Limit = limitPerType,
-                        AttributesToSearchOn = Plugin.Instance?.Configuration.AttributesToSearchOn
-                    }
-                );
-                ids.AddRange(results.Hits.Select(h => Guid.Parse(h.Guid)));
-            }
+            var tasks = types.Select(type => clientHolder.Index!.SearchAsync<MeilisearchItem>(
+                filter.SearchTerm,
+                new SearchQuery
+                {
+                    Filter = $"type = \"{type}\"",
+                    Limit = limitPerType,
+                    AttributesToSearchOn = attributesToSearchOn
+                }
+            ));
+            var results = await Task.WhenAll(tasks);
+            return results
+                .SelectMany(r => r.Hits)
+                .Select(h => Guid.Parse(h.Guid))
+                .ToList();
         }
         catch (MeilisearchCommunicationError e)
         {
             logger.LogError(e, "Meilisearch communication error");
             clientHolder.Unset();
+            return [];
         }
-
-        return ids.Distinct().ToList();
     }
 
     private static List<string> BuildTypeList(InternalItemsQuery filter)
