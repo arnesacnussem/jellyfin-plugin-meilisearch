@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.12",
+                "changelog": "- [f31f2a8] fix: deduplicate items by id in MeilisearchMutateFilter (#112)\n- [c0c0fde] Feat: configurable item types for search results (#111)",
+                "targetAbi": "10.11.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.12/meilisearch_1.11.1.12.zip",
+                "checksum": "4c4f8a43315cab601550e3cf568e745e",
+                "timestamp": "2026-04-27T10:09:50Z"
+            },
+            {
                 "version": "1.11.1.11",
                 "changelog": "- [de593e5] ci(deps): bump actions/upload-artifact from 7.0.0 to 7.0.1 (#107)\n- [e120910] ci(deps): bump ad-m/github-push-action from 1.0.0 to 1.1.0 (#108)\n- [1064e0a] ci(deps): bump actions/download-artifact from 8.0.0 to 8.0.1 (#104)\n- [8f43a19] ci(deps): bump ncipollo/release-action from 1.20.0 to 1.21.0 (#105)\n- [4db069b] ci(deps): bump actions/setup-dotnet from 5.1.0 to 5.2.0 (#103)\n- [f346ede] ci(deps): bump actions/upload-artifact from 6.0.0 to 7.0.0 (#101)\n- [a43dedc] ci(deps): bump actions/download-artifact from 7.0.0 to 8.0.0 (#102)\n- [c51c0e9] refactor(db): use async query and dispose DbContext properly",
                 "targetAbi": "10.11.0.0",
