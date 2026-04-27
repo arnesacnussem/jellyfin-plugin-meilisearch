@@ -38,24 +38,27 @@ public class MeilisearchRepositoryDecorator(
         var types = BuildTypeList(filter);
         if (types.Count == 0) return [];
 
-        var limit = filter.Limit is > 0 ? filter.Limit.Value : 30;
-        var limitPerType = Math.Clamp(limit / types.Count, 30, 100);
+        var limit = Math.Max(filter.Limit is > 0 ? filter.Limit.Value : 30, 1);
+        var typeFilter = string.Join(" OR ", types.Select(t => $"type = \"{t}\""));
         try
         {
-            var tasks = types.Select(type => clientHolder.Index!.SearchAsync<MeilisearchItem>(
+            var result = await clientHolder.Index!.SearchAsync<MeilisearchItem>(
                 filter.SearchTerm,
                 new SearchQuery
                 {
-                    Filter = $"type = \"{type}\"",
-                    Limit = limitPerType,
+                    Filter = typeFilter,
+                    Limit = limit,
                 }
-            ));
-            var results = await Task.WhenAll(tasks);
-            return results
-                .SelectMany(r => r.Hits)
-                .DistinctBy(h => h.Guid)
-                .Select(h => Guid.Parse(h.Guid))
-                .ToList();
+            );
+            List<Guid> ids = [];
+            foreach (var hit in result.Hits)
+            {
+                if (Guid.TryParse(hit.Guid, out var id))
+                    ids.Add(id);
+                else
+                    logger.LogWarning("Skipping Meilisearch hit with invalid GUID '{Guid}'", hit.Guid);
+            }
+            return ids;
         }
         catch (MeilisearchCommunicationError e)
         {
