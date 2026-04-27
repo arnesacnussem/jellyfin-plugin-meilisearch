@@ -13,13 +13,12 @@ public class DbIndexer(
     MeilisearchClientHolder clientHolder,
     ILogger<DbIndexer> logger) : Indexer(clientHolder, logger)
 {
-    protected override async Task<ImmutableList<MeilisearchItem>> GetItems()
+    protected override async Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes)
     {
         var dbPath = Path.Combine(applicationPaths.DataPath, "jellyfin.db");
         Status["Database"] = dbPath;
         logger.LogInformation("Indexing items from database: {DB}", dbPath);
 
-        // Open Jellyfin library
         await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
             DataSource = dbPath,
@@ -27,25 +26,29 @@ public class DbIndexer(
         }.ToString());
         await connection.OpenAsync();
 
-        // Query all base items
         await using var command = connection.CreateCommand();
-        command.CommandText =
-            """
+        var types = includedTypes.Select((t, i) => (t, i)).ToList();
+        command.CommandText = $"""
             SELECT
-                Id, Type, ParentId, CommunityRating, 
-                Name, Overview, ProductionYear, Genres, 
-                Studios, Tags, IsFolder, CriticRating, 
-                OriginalTitle, SeriesName, Artists, 
+                Id, Type, ParentId, CommunityRating,
+                Name, Overview, ProductionYear, Genres,
+                Studios, Tags, IsFolder, CriticRating,
+                OriginalTitle, SeriesName, Artists,
                 AlbumArtists, Path, Tagline
-            FROM 
+            FROM
                 BaseItems
+            WHERE Type IN ({string.Join(", ", types.Select(x => $"@type{x.i}"))})
             """;
+        foreach (var (t, i) in types)
+            command.Parameters.AddWithValue($"@type{i}", t);
 
         await using var reader = await command.ExecuteReaderAsync();
         var items = new List<MeilisearchItem>();
         while (await reader.ReadAsync())
         {
-            var item = new MeilisearchItem(
+            var path = !reader.IsDBNull(16) ? reader.GetString(16) : null;
+            if (path?.StartsWith('%') == true) path = null;
+            items.Add(new MeilisearchItem(
                 reader.GetGuid(0).ToString(),
                 !reader.IsDBNull(1) ? reader.GetString(1) : null,
                 !reader.IsDBNull(2) ? reader.GetString(2) : null,
@@ -62,11 +65,9 @@ public class DbIndexer(
                 SeriesName: !reader.IsDBNull(13) ? reader.GetString(13) : null,
                 Artists: !reader.IsDBNull(14) ? reader.GetString(14).Split('|') : null,
                 AlbumArtists: !reader.IsDBNull(15) ? reader.GetString(15).Split('|') : null,
-                Path: !reader.IsDBNull(16) ? reader.GetString(16) : null,
+                Path: path,
                 Tagline: !reader.IsDBNull(17) ? reader.GetString(17) : null
-            );
-            if (item.Path?[0] == '%') item = item with { Path = null };
-            items.Add(item);
+            ));
         }
 
         return items.ToImmutableList();

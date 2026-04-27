@@ -3,7 +3,6 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -21,10 +20,8 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
         ILogger<Plugin> logger,
-        IServiceProvider serviceProvider,
         MeilisearchClientHolder clientHolder,
         Indexer indexer,
-        IActionDescriptorCollectionProvider provider,
         IHostApplicationLifetime hostApplicationLifetime
     ) : base(
         applicationPaths,
@@ -42,7 +39,6 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
         };
 
         hostApplicationLifetime.ApplicationStarted.Register(() => { _ = TryCreateMeilisearchClient(false); });
-        hostApplicationLifetime.ApplicationStarted.Register(() => { TryAddFilter(provider, serviceProvider); });
     }
 
     private EventHandler<BasePluginConfiguration> ReloadMeilisearch { get; }
@@ -65,29 +61,11 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
         ];
     }
 
-    private void TryAddFilter(IActionDescriptorCollectionProvider provider, IServiceProvider serviceProvider)
-    {
-        // I guess this would work purely because this is a plugin and is loaded after ItemsController
-        var count = provider.AddDynamicFilter<MeilisearchMutateFilter>(serviceProvider, t =>
-        {
-            var sig = $"{t.ControllerTypeInfo.FullName}#{t.MethodInfo.Name}";
-            if (Configuration.Debug) Console.WriteLine($"\tmethod: {sig}");
-
-            return sig == "Jellyfin.Api.Controllers.ItemsController#GetItems";
-        });
-        _logger.LogInformation("Added {Count} action filters", count);
-    }
-
     public override void UpdateConfiguration(BasePluginConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var config = (Config)configuration;
-        var currentTypes = Configuration.IncludedItemTypes ?? [];
-        var newTypes = config.IncludedItemTypes ?? [];
-        var skipReload = Configuration.Url == config.Url &&
-                         Configuration.ApiKey == config.ApiKey &&
-                         currentTypes.OrderBy(x => x, StringComparer.Ordinal)
-                             .SequenceEqual(newTypes.OrderBy(x => x, StringComparer.Ordinal));
+        var skipReload = Configuration.Url == config.Url && Configuration.ApiKey == config.ApiKey;
 
         Configuration = config;
         SaveConfiguration(Configuration);

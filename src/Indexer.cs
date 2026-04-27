@@ -24,19 +24,7 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
 
     private async Task IndexInternal(MeilisearchClient meilisearchClient, Index index)
     {
-        var items = await GetItems();
-
-        // Filter by configuration
-        var includedTypes = Plugin.Instance?.Configuration.IncludedItemTypes ?? Config.DefaultIncludedItemTypes;
-        if (includedTypes.Length == 0) includedTypes = Config.DefaultIncludedItemTypes;
-        var includedFullNames = includedTypes
-            .Select(key => TypeHelper.JellyfinTypeMap.TryGetValue(key, out var typeValue) ? typeValue : null)
-            .Where(it => it != null)
-            .ToHashSet();
-
-        var originalCount = items.Count;
-        items = items.Where(it => it.Type != null && includedFullNames.Contains(it.Type)).ToImmutableList();
-        logger.LogInformation("Filtered items by type: {BEFORE} -> {AFTER}", originalCount, items.Count);
+        var items = await GetItems(TypeHelper.TypeFullNames);
 
         if (items.Count <= 0)
         {
@@ -50,8 +38,5 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
         Status["LastIndexed"] = DateTime.Now.ToString(CultureInfo.CurrentCulture);
     }
 
-    /// <summary>
-    /// Get the items to index
-    /// </summary>
-    protected abstract Task<ImmutableList<MeilisearchItem>> GetItems();
+    protected abstract Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes);
 }
