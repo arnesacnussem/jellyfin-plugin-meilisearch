@@ -102,6 +102,7 @@ public class MeilisearchRepositoryDecorator(
         return types;
     }
 
+    public Task ReattachUserDataAsync(BaseItem item, CancellationToken cancellationToken) => inner.ReattachUserDataAsync(item, cancellationToken);
     public void DeleteItem(IReadOnlyList<Guid> ids) => inner.DeleteItem(ids);
     public void SaveItems(IReadOnlyList<BaseItem> items, CancellationToken ct) => inner.SaveItems(items, ct);
     public void SaveImages(BaseItem item) => inner.SaveImages(item);
