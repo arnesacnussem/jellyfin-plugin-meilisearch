@@ -82,7 +82,12 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var config = (Config)configuration;
-        var skipReload = Configuration.Url == config.Url && Configuration.ApiKey == config.ApiKey;
+        var currentTypes = Configuration.IncludedItemTypes ?? [];
+        var newTypes = config.IncludedItemTypes ?? [];
+        var skipReload = Configuration.Url == config.Url &&
+                         Configuration.ApiKey == config.ApiKey &&
+                         currentTypes.OrderBy(x => x, StringComparer.Ordinal)
+                             .SequenceEqual(newTypes.OrderBy(x => x, StringComparer.Ordinal));
 
         Configuration = config;
         SaveConfiguration(Configuration);
