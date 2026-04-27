@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.14",
+                "changelog": "- [4995cf4] fix: keep Meilisearch search state consistent (#116)",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.14/meilisearch_1.11.1.14.zip",
+                "checksum": "709e1c3ad7cd789cd12c290eda29ab2f",
+                "timestamp": "2026-04-27T15:45:44Z"
+            },
+            {
                 "version": "1.11.1.13",
                 "changelog": "- [7b7fe17] feat: index and search by SortName to support non-Latin item names (#115)\n- [0396e23] feat: add configurable matchingStrategy for Meilisearch queries (#114)\n- [00ecacb] refactor: replace action filter with IItemRepository decorator for search (#113)",
                 "targetAbi": "10.11.7.0",
