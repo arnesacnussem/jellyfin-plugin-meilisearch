@@ -229,12 +229,12 @@ public class MeilisearchMutateFilter(
             : 30;
         var meilisearchItems = await Search(ch.Index, searchTerm, filteredTypes, additionalFilters, limitPreItem);
 
-        // remove items that are not visible to the user
-        var items = meilisearchItems.Select(it =>
+        // deduplicate hits before library lookups, then filter by visibility
+        var items = meilisearchItems.DistinctBy(it => it.Guid).Select(it =>
         {
             var item = libraryManager.GetItemById(Guid.Parse(it.Guid));
             return (item?.IsVisibleStandalone(user) ?? false) ? item : null;
-        }).Where(it => it is not null)!.ToImmutableList<BaseItem>();
+        }).OfType<BaseItem>().ToImmutableList();
 
 
         var notFallback = !(Plugin.Instance?.Configuration.FallbackToJellyfin ?? false);
