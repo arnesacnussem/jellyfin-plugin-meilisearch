@@ -42,12 +42,14 @@ public class MeilisearchRepositoryDecorator(
         var typeFilter = string.Join(" OR ", types.Select(t => $"type = \"{t}\""));
         try
         {
+            var matchingStrategy = Plugin.Instance?.Configuration.MatchingStrategy ?? "last";
             var result = await clientHolder.Index!.SearchAsync<MeilisearchItem>(
                 filter.SearchTerm,
                 new SearchQuery
                 {
                     Filter = typeFilter,
                     Limit = limit,
+                    MatchingStrategy = matchingStrategy,
                 }
             );
             List<Guid> ids = [];

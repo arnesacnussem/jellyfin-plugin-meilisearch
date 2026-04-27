@@ -82,6 +82,15 @@
                     <input id="IndexName" is="emby-input" name="IndexName" type="text"/>
                     <div class="fieldDescription">Default to server friendly name.</div>
                 </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="MatchingStrategy">Matching Strategy</label>
+                    <select id="MatchingStrategy" is="emby-select" name="MatchingStrategy">
+                        <option value="last">last (default — return results with most keywords matched)</option>
+                        <option value="all">all — only return results matching every keyword</option>
+                        <option value="frequency">frequency — prioritise words appearing less frequently</option>
+                    </select>
+                    <div class="fieldDescription">Controls how Meilisearch matches search keywords.</div>
+                </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
                         <input id="Debug" is="emby-checkbox" name="Debug" type="checkbox"/>
@@ -149,6 +158,7 @@
                         document.querySelector('#ApiKey').value = config.ApiKey;
                         document.querySelector('#Debug').checked = config.Debug;
                         document.querySelector('#IndexName').value = config.IndexName;
+                        document.querySelector('#MatchingStrategy').value = config.MatchingStrategy || 'last';
                         Dashboard.hideLoadingMsg();
                     });
                     updateStatus('status');
@@ -162,6 +172,7 @@
                         config.ApiKey = document.querySelector('#ApiKey').value;
                         config.Debug = document.querySelector('#Debug').checked;
                         config.IndexName = document.querySelector('#IndexName').value;
+                        config.MatchingStrategy = document.querySelector('#MatchingStrategy').value;
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });
