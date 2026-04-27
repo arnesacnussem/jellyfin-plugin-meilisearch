@@ -21,10 +21,12 @@ public class MeilisearchRepositoryDecorator(
         if (string.IsNullOrEmpty(filter.SearchTerm) || !clientHolder.Ok || clientHolder.Index == null)
             return inner.GetItems(filter);
 
+        // IItemRepository.GetItems is synchronous; Task.Run avoids a deadlock by running
+        // SearchAsync on a thread-pool thread without an ASP.NET SynchronizationContext.
         var ids = Task.Run(() => SearchAsync(filter)).GetAwaiter().GetResult();
 
         if (ids.Count == 0)
-            return new QueryResult<BaseItem> { TotalRecordCount = 0, Items = [] };
+            return inner.GetItems(filter); // fall back to Jellyfin native search
 
         filter.ItemIds = [.. ids];
         filter.SearchTerm = null;
@@ -51,6 +53,7 @@ public class MeilisearchRepositoryDecorator(
             var results = await Task.WhenAll(tasks);
             return results
                 .SelectMany(r => r.Hits)
+                .DistinctBy(h => h.Guid)
                 .Select(h => Guid.Parse(h.Guid))
                 .ToList();
         }

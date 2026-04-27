@@ -47,7 +47,7 @@ public class DbIndexer(
         while (await reader.ReadAsync())
         {
             var path = !reader.IsDBNull(16) ? reader.GetString(16) : null;
-            if (path?[0] == '%') path = null;
+            if (path?.StartsWith('%') == true) path = null;
             items.Add(new MeilisearchItem(
                 reader.GetGuid(0).ToString(),
                 !reader.IsDBNull(1) ? reader.GetString(1) : null,

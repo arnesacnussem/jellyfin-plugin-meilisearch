@@ -35,5 +35,9 @@ public class PluginRegister : IPluginServiceRegistrator
                 );
             });
         }
+        else
+        {
+            Console.Error.WriteLine("[Meilisearch] WARNING: IItemRepository was not registered before the plugin — Meilisearch search decoration is disabled.");
+        }
     }
 }
