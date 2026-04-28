@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.11.1.15",
+                "changelog": "- [95f5916] fix: replace DbIndexer with EfCoreIndexer to avoid SQLite readonly error 119",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.11.1.15/meilisearch_1.11.1.15.zip",
+                "checksum": "6494d8016ea91f610a4e58e51c8711f0",
+                "timestamp": "2026-04-28T19:19:12Z"
+            },
+            {
                 "version": "1.11.1.14",
                 "changelog": "- [4995cf4] fix: keep Meilisearch search state consistent (#116)",
                 "targetAbi": "10.11.7.0",
