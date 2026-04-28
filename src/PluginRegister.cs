@@ -13,7 +13,7 @@ public class PluginRegister : IPluginServiceRegistrator
     {
         serviceCollection.AddSingleton<UpdateMeilisearchIndexTask>();
         serviceCollection.AddSingleton<MeilisearchClientHolder>();
-        serviceCollection.AddSingleton<Indexer, DbIndexer>();
+        serviceCollection.AddSingleton<Indexer, EfCoreIndexer>();
 
         var descriptor = serviceCollection.FirstOrDefault(d => d.ServiceType == typeof(IItemRepository));
         if (descriptor is not null)
