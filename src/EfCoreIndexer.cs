@@ -40,7 +40,7 @@ public class EfCoreIndexer(
             Tags: item.Tags?.Split('|'),
             CommunityRating: item.CommunityRating,
             ProductionYear: item.ProductionYear,
-            Path: item.Path?[0] == '%' ? null : item.Path,
+            Path: string.IsNullOrEmpty(item.Path) || item.Path[0] != '%' ? item.Path : null,
             Artists: item.Artists?.Split('|'),
             AlbumArtists: item.AlbumArtists?.Split('|'),
             CriticRating: item.CriticRating,

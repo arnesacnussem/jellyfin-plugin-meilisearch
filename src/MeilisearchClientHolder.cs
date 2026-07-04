@@ -30,13 +30,15 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
 
     public Task<T>? Call<T>(Func<MeilisearchClient, Index, Task<T>> func)
     {
-        if (!Ok)
+        var client = Client;
+        var index = Index;
+        if (client == null || index == null)
         {
             _ = TryReconnectInBackground("Call invoked while not connected");
             return null;
         }
 
-        return ExecuteWithReconnectRetryAsync(func);
+        return ExecuteWithReconnectRetryAsync(client, index, func);
     }
 
     public void Unset()
@@ -133,11 +135,12 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         return index;
     }
 
-    private async Task<T> ExecuteWithReconnectRetryAsync<T>(Func<MeilisearchClient, Index, Task<T>> func)
+    private async Task<T> ExecuteWithReconnectRetryAsync<T>(
+        MeilisearchClient client, Index index, Func<MeilisearchClient, Index, Task<T>> func)
     {
         try
         {
-            return await func(Client!, Index!).ConfigureAwait(false);
+            return await func(client, index).ConfigureAwait(false);
         }
         catch (Exception e) when (IsReconnectable(e))
         {
@@ -145,12 +148,14 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
             Unset();
             await TryReconnectAsync("request failed", e).ConfigureAwait(false);
 
-            if (!Ok)
+            var retryClient = Client;
+            var retryIndex = Index;
+            if (retryClient == null || retryIndex == null)
             {
                 throw;
             }
 
-            return await func(Client!, Index!).ConfigureAwait(false);
+            return await func(retryClient, retryIndex).ConfigureAwait(false);
         }
     }
 

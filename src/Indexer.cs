@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Globalization;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ namespace Jellyfin.Plugin.Meilisearch;
 
 public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Indexer> logger)
 {
-    public Dictionary<string, string> Status { get; } = new();
+    public ConcurrentDictionary<string, string> Status { get; } = new();
 
     public async Task Index()
     {

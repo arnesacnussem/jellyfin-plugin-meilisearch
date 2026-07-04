@@ -74,25 +74,41 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
             ReloadMeilisearch.Invoke(this, configuration);
     }
 
-    private volatile Task? _updatingTask;
+    private readonly object _updatingTaskLock = new();
+    private Task? _updatingTask;
 
     public async Task TryCreateMeilisearchClient(bool join = true)
     {
-        if (_updatingTask != null)
+        Task? task;
+        bool startedNew;
+        lock (_updatingTaskLock)
+        {
+            startedNew = _updatingTask == null;
+            if (startedNew)
+            {
+                _updatingTask = _TryCreateMeilisearchClient();
+            }
+
+            task = _updatingTask;
+        }
+
+        if (!startedNew)
         {
             _logger.LogWarning("Meilisearch client configuration is still updating，skipping");
-            if (join) await _updatingTask;
+            if (join) await task!;
             return;
         }
 
         try
         {
-            _updatingTask = _TryCreateMeilisearchClient();
-            await _updatingTask;
+            await task!;
         }
         finally
         {
-            _updatingTask = null;
+            lock (_updatingTaskLock)
+            {
+                _updatingTask = null;
+            }
         }
     }
 
