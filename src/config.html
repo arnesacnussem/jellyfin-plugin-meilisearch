@@ -126,7 +126,7 @@
                 reindexBtn.className = clsNameDisabled;
 
                 statusEl.innerText = 'loading status...';
-                ApiClient.getJSON('/meilisearch/' + endpoint).then(status => {
+                ApiClient.getJSON(ApiClient.getUrl('meilisearch/' + endpoint)).then(status => {
                     statusEl.innerText = JSON.stringify(status, null, 2);
                     if (status.meilisearchOk) {
                         reconnectBtn.style.display = 'none';
