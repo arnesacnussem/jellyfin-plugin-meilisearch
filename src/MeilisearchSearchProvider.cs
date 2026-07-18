@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -103,8 +104,11 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
             MatchingStrategy = matchingStrategy,
         };
 
+        var stopwatch = Stopwatch.StartNew();
         var result = await index.SearchAsync<MeilisearchSearchHit>(
             searchTerm, searchQuery, cancellationToken).ConfigureAwait(false);
+        stopwatch.Stop();
+        Plugin.Instance?.UpdateAverageSearchTime(stopwatch.ElapsedMilliseconds);
 
         var results = new List<(Guid, float)>(result.Hits.Count);
         foreach (var hit in result.Hits)

@@ -15,7 +15,6 @@ public class EfCoreIndexer(
     protected override async Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes)
     {
         using var context = dbProvider.DbContextFactory!.CreateDbContext();
-        Status["Database"] = context.Database.GetDbConnection().ConnectionString;
 
         var entities = await context.BaseItems
             .AsNoTracking()
