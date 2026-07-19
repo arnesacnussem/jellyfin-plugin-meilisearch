@@ -87,9 +87,13 @@ Index will update on following events:
 
 ### How it works
 
-The core feature, which is to mutate the search request, is done by injecting an [`ActionFilter`](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/filters?view=aspnetcore-8.0#action-filters).
-So it may only support a few versions of Jellyfin. At the moment I'm using `Jellyfin 10.11.0`,
-but it should work on other versions as long as the required parameter name of `/Items` endpoint doesn't change.
+On **Jellyfin 12.0** (the version this build targets), the core feature is implemented as a Jellyfin search
+provider (`IExternalSearchProvider` / `ISearchProvider`), which Jellyfin discovers via
+`GetExports<ISearchProvider>()`. It registers with a higher priority than the built-in SQL search provider,
+so search queries are served by Meilisearch first.
+
+Because this hooks into Jellyfin internals, it only supports specific Jellyfin versions, and the mechanism
+has changed over time: on Jellyfin 10.11 it used an `IItemRepository` decorator instead of a search provider.
 
 ---
 
@@ -99,4 +103,4 @@ I've seen JellySearch, which is a wonderful project, but I don't really like set
 
 So I am writing this, but it still requires a Meilisearch instance.
 
-At this moment, only the `/Items` endpoint is affected by this plugin, but it still improves a lot on my 200k items library.
+At this moment, only search queries are handled by this plugin, but it still improves a lot on my 200k items library.
