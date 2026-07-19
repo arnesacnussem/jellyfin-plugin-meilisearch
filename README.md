@@ -58,7 +58,6 @@ Improved:
                   "meilisearchOk": true,
                   "averageSearchTime": "0ms",
                   "indexStatus": {
-                    "Database": "Data Source=/config/data/jellyfin.db;Cache=Default;Default Timeout=30;Pooling=True",
                     "Items": "20569",
                     "LastIndexed": "1/28/2026 4:10:01 PM"
                   }

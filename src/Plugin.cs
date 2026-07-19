@@ -14,7 +14,25 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     private readonly MeilisearchClientHolder _clientHolder;
     private readonly ILogger<Plugin> _logger;
     public readonly Indexer Indexer;
-    public long AverageSearchTime;
+
+    private readonly object _avgLock = new();
+    private double _averageSearchTime;
+    private bool _hasSearchTime;
+
+    /// <summary>
+    /// Exponential moving average of recent search durations, in milliseconds.
+    /// The most recent sample is weighted at 50%; this is a smoothed figure, not a mean over all searches.
+    /// </summary>
+    public long AverageSearchTime
+    {
+        get
+        {
+            lock (_avgLock)
+            {
+                return (long)Math.Round(_averageSearchTime);
+            }
+        }
+    }
 
     public Plugin(
         IApplicationPaths applicationPaths,
@@ -121,13 +139,14 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     }
 
 
-    public void UpdateAverageSearchTime(long averageSearchTime)
+    public void UpdateAverageSearchTime(long searchTime)
     {
-        lock (this)
+        lock (_avgLock)
         {
-            AverageSearchTime = AverageSearchTime == 0
-                ? averageSearchTime
-                : (averageSearchTime + AverageSearchTime) / 2;
+            _averageSearchTime = _hasSearchTime
+                ? (searchTime + _averageSearchTime) / 2
+                : searchTime;
+            _hasSearchTime = true;
         }
     }
 }
