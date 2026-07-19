@@ -65,7 +65,9 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var config = (Config)configuration;
-        var skipReload = Configuration.Url == config.Url && Configuration.ApiKey == config.ApiKey;
+        var skipReload = Configuration.Url == config.Url
+                         && Configuration.ApiKey == config.ApiKey
+                         && Configuration.IndexName == config.IndexName;
 
         Configuration = config;
         SaveConfiguration(Configuration);
@@ -123,8 +125,9 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
     {
         lock (this)
         {
-            if (AverageSearchTime == 0) AverageSearchTime = averageSearchTime;
-            AverageSearchTime = (averageSearchTime + AverageSearchTime) / 2;
+            AverageSearchTime = AverageSearchTime == 0
+                ? averageSearchTime
+                : (averageSearchTime + AverageSearchTime) / 2;
         }
     }
 }
