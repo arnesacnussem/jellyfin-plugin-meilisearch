@@ -23,4 +23,9 @@ public class Config : BasePluginConfiguration
     /// Meilisearch matchingStrategy: "last", "all", or "frequency".
     /// </summary>
     public string MatchingStrategy { get; set; }
+
+    /// <summary>
+    /// Number of items read from the database by the last full reindex. Not shown on the config page.
+    /// </summary>
+    public int LastIndexedItemCount { get; set; }
 }

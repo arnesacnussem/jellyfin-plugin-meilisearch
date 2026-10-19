@@ -1,4 +1,7 @@
-﻿using MediaBrowser.Controller;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using MediaBrowser.Controller;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
 using Index = Meilisearch.Index;
@@ -14,7 +17,10 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
     ];
 
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
+    private static readonly HttpClient SwapHttpClient = new();
     private volatile Config? _lastConfiguration;
+    private string? _url;
+    private string? _apiKey;
 
     public string Status { get; private set; } = "Not Configured";
     public bool Ok => Client != null && Index != null;
@@ -76,6 +82,8 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
                 ? (string.IsNullOrEmpty(configuration.Url) ? null : configuration.Url)
                 : envURL;
             Client = new MeilisearchClient(url, apiKey);
+            _url = url;
+            _apiKey = apiKey;
             Index = await GetIndex(Client, configuration.IndexName).ConfigureAwait(false);
             await UpdateMeilisearchHealthAsync().ConfigureAwait(false);
         }
@@ -113,26 +121,57 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         var sanitizedConfigName = applicationHost.FriendlyName.Replace(" ", "-");
         var indexName = string.IsNullOrEmpty(configuredIndexName) ? sanitizedConfigName : configuredIndexName;
         var index = meilisearch.Index(indexName);
-
-        await index.UpdateFilterableAttributesAsync(
-            ["type", "parentId", "isFolder"]
-        );
-
-        await index.UpdateSortableAttributesAsync(
-            ["communityRating", "criticRating"]
-        );
-
-        await index.UpdateSearchableAttributesAsync(SearchableAttributes);
-        await index.UpdateDisplayedAttributesAsync(SearchableAttributes.Concat(["guid", "type"]));
-
-        // Set ranking rules to add critic rating
-        await index.UpdateRankingRulesAsync(
-            [
-                "words", "typo", "proximity", "attribute", "sort", "exactness", "communityRating:desc",
-                "criticRating:desc"
-            ]
-        );
+        await ApplySettingsAsync(index);
         return index;
+    }
+
+    /// <summary>
+    /// Enqueues the plugin's index settings. Returns the enqueued tasks so callers can wait for them.
+    /// </summary>
+    public static async Task<IReadOnlyList<TaskInfo>> ApplySettingsAsync(Index index)
+    {
+        return
+        [
+            await index.UpdateFilterableAttributesAsync(
+                ["type", "parentId", "isFolder"]
+            ),
+            await index.UpdateSortableAttributesAsync(
+                ["communityRating", "criticRating"]
+            ),
+            await index.UpdateSearchableAttributesAsync(SearchableAttributes),
+            await index.UpdateDisplayedAttributesAsync(SearchableAttributes.Concat(["guid", "type"])),
+            // Set ranking rules to add critic rating
+            await index.UpdateRankingRulesAsync(
+                [
+                    "words", "typo", "proximity", "attribute", "sort", "exactness", "communityRating:desc",
+                    "criticRating:desc"
+                ]
+            )
+        ];
+    }
+
+    /// <summary>
+    /// Enqueues a swap of two indexes and returns its task uid. The SDK's SwapIndexesAsync always sends the
+    /// "rename" field, which older Meilisearch versions (such as 1.12) reject, so the request is sent directly.
+    /// </summary>
+    public async Task<int> SwapIndexesAsync(string first, string second)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, _url!.TrimEnd('/') + "/swap-indexes");
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        }
+
+        request.Content = JsonContent.Create(new[] { new { indexes = new[] { first, second } } });
+        using var response = await SwapHttpClient.SendAsync(request).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"Meilisearch index swap failed ({(int)response.StatusCode}): {body}");
+        }
+
+        using var json = JsonDocument.Parse(body);
+        return json.RootElement.GetProperty("taskUid").GetInt32();
     }
 
     private async Task<T> ExecuteWithReconnectRetryAsync<T>(
