@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.12.1.5",
+                "changelog": "\n- [13faf4b] fix: remove documents of deleted items from the index (#142)\n- [f1ab9fa] ci(deps): bump actions/download-artifact from 8.0.1 to 8.0.2 (#139)\n- [1955481] ci(deps): bump actions/upload-artifact from 7.0.1 to 7.0.2 (#140)\n- [85ae32d] ci(deps): bump actions/checkout from 7.0.0 to 7.0.1 (#135)\n- [531da07] ci(deps): bump actions/setup-dotnet from 5.4.0 to 6.0.0 (#136)\n- [1dd1a59] update README",
+                "targetAbi": "12.0.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.12.1.5/meilisearch_1.12.1.5.zip",
+                "checksum": "4efd0b1c543da292a9f7c46f720cb98a",
+                "timestamp": "2026-10-19T16:36:29Z"
+            },
+            {
                 "version": "1.12.1.4",
                 "changelog": "\n- [73d7ee2] fix: harden AverageSearchTime tracking and purge conn-string leftovers\n- [9da8856] fix: reload on IndexName change, real search timing, drop conn-string leak (#134)\n- [6d2766f] fix(config): build status URL with ApiClient.getUrl for base-path installs (#133)\n- [d0e488f] ci(deps): bump actions/setup-dotnet from 5.3.0 to 5.4.0 (#130)",
                 "targetAbi": "12.0.0.0",
