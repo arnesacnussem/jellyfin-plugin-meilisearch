@@ -10,8 +10,9 @@ namespace Jellyfin.Plugin.Meilisearch;
 public class Controller(MeilisearchClientHolder clientHolder) : ControllerBase
 {
     [HttpGet("status")]
-    public ActionResult GetStatus()
+    public async Task<ActionResult> GetStatus()
     {
+        await Plugin.Instance!.Indexer.UpdateIndexStats();
         return new JsonResult(new
         {
             meilisearch = clientHolder.Status,
@@ -25,13 +26,13 @@ public class Controller(MeilisearchClientHolder clientHolder) : ControllerBase
     public async Task<ActionResult> Reconnect()
     {
         if (!clientHolder.Ok) await Plugin.Instance!.TryCreateMeilisearchClient();
-        return GetStatus();
+        return await GetStatus();
     }
 
     [HttpGet("reindex")]
     public async Task<ActionResult> Reindex()
     {
         await Plugin.Instance!.Indexer.Index();
-        return GetStatus();
+        return await GetStatus();
     }
 }

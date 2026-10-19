@@ -59,7 +59,9 @@ Improved:
                   "averageSearchTime": "0ms",
                   "indexStatus": {
                     "Items": "20569",
-                    "LastIndexed": "1/28/2026 4:10:01 PM"
+                    "LastIndexed": "1/28/2026 4:10:01 PM",
+                    "Documents": "20569",
+                    "IsIndexing": "False"
                   }
                 }
               ```
@@ -82,6 +84,15 @@ Index will update on following events:
 - Configuration change
 - Library scan complete
 - Update index task being triggered
+
+Each of these rebuilds the index: the plugin writes all items into a temporary `<index>_rebuild` index, swaps it with
+the live one and deletes the old documents, so items removed from Jellyfin do not stay in search. Items removed between
+reindexes, such as Live TV programmes replaced by a guide refresh, are deleted from the index within a few seconds.
+If the API key is not the master key, it needs the `indexes.create`, `indexes.delete` and `indexes.swap` actions in
+addition to document access.
+
+`Items` is the number of items read from Jellyfin on the last reindex, and `Documents` is the number of documents
+currently in the Meilisearch index.
 
 ---
 
