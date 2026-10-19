@@ -234,7 +234,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         return Task.Run(() => TryReconnectAsync(reason));
     }
 
-    private static bool IsReconnectable(Exception e)
+    public static bool IsReconnectable(Exception e)
     {
         return e is MeilisearchCommunicationError
                || e is HttpRequestException

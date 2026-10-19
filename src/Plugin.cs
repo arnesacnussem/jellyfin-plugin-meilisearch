@@ -87,6 +87,8 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
                          && Configuration.ApiKey == config.ApiKey
                          && Configuration.IndexName == config.IndexName;
 
+        // Written by the indexer; the config page posts back whatever value it loaded.
+        config.LastIndexedItemCount = Configuration.LastIndexedItemCount;
         Configuration = config;
         SaveConfiguration(Configuration);
         ConfigurationChanged?.Invoke(this, configuration);

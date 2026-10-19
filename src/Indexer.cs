@@ -83,12 +83,17 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
             if (task != null)
             {
                 await task;
+                return;
             }
         }
         catch (Exception e)
         {
             logger.LogDebug(e, "Failed to read Meilisearch index stats");
         }
+
+        // Do not show a count that can no longer be checked.
+        Status.TryRemove("Documents", out _);
+        Status.TryRemove("IsIndexing", out _);
     }
 
     private async Task IndexInternal(MeilisearchClient meilisearchClient, Index index)
@@ -121,14 +126,24 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
                     "Database returned {COUNT} items, far fewer than the {PREVIOUS} of the last reindex; " +
                     "adding them without removing stale documents",
                     items.Count, previousCount);
-                foreach (var task in await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid"))
-                {
-                    await WaitForTask(meilisearchClient, task);
-                }
+                await AddDocuments(meilisearchClient, index, items);
             }
             else
             {
-                await Rebuild(meilisearchClient, index, items);
+                try
+                {
+                    await Rebuild(meilisearchClient, index, items);
+                }
+                catch (Exception e) when (!MeilisearchClientHolder.IsReconnectable(e))
+                {
+                    // Keep the index current even when it cannot be rebuilt, for example with an API key
+                    // that lacks the index actions.
+                    logger.LogError(e,
+                        "Failed to rebuild Meilisearch index {INDEX}; adding items without removing stale " +
+                        "documents. The API key needs the indexes.create, indexes.delete and indexes.swap actions",
+                        index.Uid);
+                    await AddDocuments(meilisearchClient, index, items);
+                }
             }
 
             string[] removed;
@@ -177,10 +192,7 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
                 await WaitForTask(client, task);
             }
 
-            foreach (var task in await temp.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid"))
-            {
-                await WaitForTask(client, task);
-            }
+            await AddDocuments(client, temp, items);
 
             // Swapping needs both indexes; the live one fails with "already exists" when present.
             await WaitForTask(client, await client.CreateIndexAsync(index.Uid, "guid"), requireSuccess: false);
@@ -195,6 +207,15 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
         // After the swap the temporary name holds the old documents.
         await TryDeleteIndex(client, tempUid);
         logger.LogInformation("Rebuilt Meilisearch index {INDEX}", index.Uid);
+    }
+
+    private static async Task AddDocuments(
+        MeilisearchClient client, Index index, IReadOnlyCollection<MeilisearchItem> items)
+    {
+        foreach (var task in await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid"))
+        {
+            await WaitForTask(client, task);
+        }
     }
 
     private async Task TryDeleteIndex(MeilisearchClient client, string uid)
