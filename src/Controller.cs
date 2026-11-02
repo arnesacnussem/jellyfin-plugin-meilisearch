@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.Meilisearch;
@@ -7,6 +8,8 @@ namespace Jellyfin.Plugin.Meilisearch;
 [Route("meilisearch")]
 [ApiController]
 [Authorize(Policy = Policies.RequiresElevation)]
+// Jellyfin 12's Swagger generator rejects plugin actions without an explicit tag.
+[Tags("Meilisearch")]
 public class Controller(MeilisearchClientHolder clientHolder) : ControllerBase
 {
     [HttpGet("status")]
