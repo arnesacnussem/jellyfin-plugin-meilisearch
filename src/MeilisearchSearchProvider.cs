@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,9 @@ namespace Jellyfin.Plugin.Meilisearch;
 /// </summary>
 public class MeilisearchSearchProvider : IExternalSearchProvider
 {
+    private static readonly string[] PersonSearchAttributes = ["name", "sortName", "originalTitle"];
+    private static readonly string PersonTypeKey = TypeHelper.MapTypeKeys([BaseItemKind.Person]).Single();
+
     private readonly MeilisearchClientHolder _clientHolder;
     private readonly ILogger<MeilisearchSearchProvider> _logger;
 
@@ -51,6 +55,8 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         }
 
         var filter = BuildFilter(query);
+        var searchPeopleByName = Plugin.Instance?.Configuration.SearchPeopleByNameOnly ?? false;
+        var attributesToSearchOn = searchPeopleByName ? ResolveAttributesToSearchOn(query) : null;
         var limit = query.Limit ?? 50;
         var matchingStrategy = Plugin.Instance?.Configuration.MatchingStrategy ?? "last";
 
@@ -58,7 +64,7 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         try
         {
             results = await SearchInternalAsync(
-                query.SearchTerm, limit, filter, matchingStrategy, cancellationToken)
+                query.SearchTerm, limit, filter, attributesToSearchOn, matchingStrategy, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -91,6 +97,7 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         string searchTerm,
         int limit,
         string? filter,
+        IEnumerable<string>? attributesToSearchOn,
         string matchingStrategy,
         CancellationToken cancellationToken)
     {
@@ -98,6 +105,7 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         var searchQuery = new SearchQuery
         {
             Filter = filter,
+            AttributesToSearchOn = attributesToSearchOn,
             Limit = limit,
             AttributesToRetrieve = ["guid"],
             ShowRankingScore = true,
@@ -154,6 +162,21 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         }
 
         return parts.Count == 0 ? null : string.Join(" AND ", parts);
+    }
+
+    /// <summary>
+    /// Restricts a search for people alone to the name fields. A person's overview is their biography, so searching it
+    /// matches anyone whose biography contains the term ("one of seven children") instead of people with that name.
+    /// </summary>
+    private static string[]? ResolveAttributesToSearchOn(SearchProviderQuery query)
+    {
+        var types = ResolveTypes(query);
+        if (types.Count > 0 && types.All(t => t == PersonTypeKey))
+        {
+            return PersonSearchAttributes;
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<string> ResolveTypes(SearchProviderQuery query)

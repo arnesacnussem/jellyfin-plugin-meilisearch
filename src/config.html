@@ -93,6 +93,16 @@
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
+                        <input id="SearchPeopleByNameOnly" is="emby-checkbox" name="SearchPeopleByNameOnly" type="checkbox"/>
+                        <span>Search people by name only</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">
+                        People searches match names only. Otherwise they also match biographies, so a common word
+                        finds everyone whose biography contains it.
+                    </div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
                         <input id="Debug" is="emby-checkbox" name="Debug" type="checkbox"/>
                         <span>Debug Output</span>
                     </label>
@@ -159,6 +169,7 @@
                         document.querySelector('#Debug').checked = config.Debug;
                         document.querySelector('#IndexName').value = config.IndexName;
                         document.querySelector('#MatchingStrategy').value = config.MatchingStrategy || 'last';
+                        document.querySelector('#SearchPeopleByNameOnly').checked = config.SearchPeopleByNameOnly;
                         Dashboard.hideLoadingMsg();
                     });
                     updateStatus('status');
@@ -173,6 +184,7 @@
                         config.Debug = document.querySelector('#Debug').checked;
                         config.IndexName = document.querySelector('#IndexName').value;
                         config.MatchingStrategy = document.querySelector('#MatchingStrategy').value;
+                        config.SearchPeopleByNameOnly = document.querySelector('#SearchPeopleByNameOnly').checked;
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });
