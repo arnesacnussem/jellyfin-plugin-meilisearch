@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/meilisearch/meilisearch/refs/heads/main/assets/meilisearch-logo-dark.svg",
         "versions": [
             {
+                "version": "1.12.1.7",
+                "changelog": "\n- [7ddbf3a] feat: add a setting to search people by name only (#145)\n- [882fdfa] ci(deps): bump actions/setup-dotnet from 6.0.0 to 6.1.0 (#144)",
+                "targetAbi": "12.0.0.0",
+                "sourceUrl": "https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/1.12.1.7/meilisearch_1.12.1.7.zip",
+                "checksum": "fd57c93ea53197e31ed4e819226d3d39",
+                "timestamp": "2026-11-13T20:15:19Z"
+            },
+            {
                 "version": "1.12.1.6",
                 "changelog": "\n- [44518d7] fix: tag API controller for OpenAPI generation (#143)",
                 "targetAbi": "12.0.0.0",
