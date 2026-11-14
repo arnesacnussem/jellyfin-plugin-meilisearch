@@ -19,8 +19,14 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
     private static readonly TimeSpan TaskPollInterval = TimeSpan.FromSeconds(1);
 
     private readonly SemaphoreSlim _indexLock = new(1, 1);
-    private readonly object _removedLock = new();
+
+    // Updates and removals take turns, so a removal is always queued in Meilisearch after an update that read
+    // the item before it was deleted.
+    private readonly SemaphoreSlim _changeLock = new(1, 1);
+
+    private readonly object _reindexChangesLock = new();
     private HashSet<string>? _removedDuringReindex;
+    private HashSet<Guid>? _updatedDuringReindex;
 
     public ConcurrentDictionary<string, string> Status { get; } = new();
 
@@ -55,15 +61,63 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
             return;
         }
 
-        lock (_removedLock)
+        lock (_reindexChangesLock)
         {
             _removedDuringReindex?.UnionWith(ids);
         }
 
-        var task = clientHolder.Call(async (_, index) => { await index.DeleteDocumentsAsync(ids); });
-        if (task != null)
+        await _changeLock.WaitAsync();
+        try
         {
-            await task;
+            var task = clientHolder.Call(async (_, index) => { await index.DeleteDocumentsAsync(ids); });
+            if (task != null)
+            {
+                await task;
+            }
+        }
+        finally
+        {
+            _changeLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Adds or replaces the documents of changed items, read from the database. Items that are no longer in
+    /// the database or are not indexed are skipped. Updates made while a full reindex is running are applied
+    /// again once it has written its documents.
+    /// </summary>
+    /// <returns>The number of documents sent to Meilisearch.</returns>
+    public async Task<int> Update(IReadOnlyCollection<Guid> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        lock (_reindexChangesLock)
+        {
+            _updatedDuringReindex?.UnionWith(ids);
+        }
+
+        await _changeLock.WaitAsync();
+        try
+        {
+            var task = clientHolder.Call(async (_, index) =>
+            {
+                var items = await GetItems(TypeHelper.TypeFullNames, ids);
+                if (items.Count > 0)
+                {
+                    // Queued, not awaited: Meilisearch applies tasks in order, which is all a later removal needs.
+                    await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid");
+                }
+
+                return items.Count;
+            });
+            return task == null ? 0 : await task;
+        }
+        finally
+        {
+            _changeLock.Release();
         }
     }
 
@@ -100,9 +154,10 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
     {
         // Track removals from before the database read: an item read here and removed afterwards would
         // otherwise be written back by this reindex.
-        lock (_removedLock)
+        lock (_reindexChangesLock)
         {
             _removedDuringReindex = [];
+            _updatedDuringReindex = [];
         }
 
         try
@@ -146,8 +201,25 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
                 }
             }
 
+            // Items changed after the database read went into the old index, which the rebuild replaced.
+            Guid[] updated;
+            lock (_reindexChangesLock)
+            {
+                updated = [.. _updatedDuringReindex!];
+                _updatedDuringReindex = null;
+            }
+
+            if (updated.Length > 0)
+            {
+                var changedItems = await GetItems(TypeHelper.TypeFullNames, updated);
+                if (changedItems.Count > 0)
+                {
+                    await AddDocuments(meilisearchClient, index, changedItems);
+                }
+            }
+
             string[] removed;
-            lock (_removedLock)
+            lock (_reindexChangesLock)
             {
                 removed = [.. _removedDuringReindex!];
                 _removedDuringReindex = null;
@@ -165,9 +237,10 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
         }
         finally
         {
-            lock (_removedLock)
+            lock (_reindexChangesLock)
             {
                 _removedDuringReindex = null;
+                _updatedDuringReindex = null;
             }
         }
     }
@@ -257,5 +330,9 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
         plugin.SaveConfiguration();
     }
 
-    protected abstract Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes);
+    /// <summary>
+    /// Reads the items to index: all of the included types, or only those among <paramref name="ids"/>.
+    /// </summary>
+    protected abstract Task<ImmutableList<MeilisearchItem>> GetItems(
+        IReadOnlySet<string> includedTypes, IReadOnlyCollection<Guid>? ids = null);
 }

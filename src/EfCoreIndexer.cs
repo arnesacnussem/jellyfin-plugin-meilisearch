@@ -12,14 +12,21 @@ public class EfCoreIndexer(
     ILogger<EfCoreIndexer> logger
 ) : Indexer(clientHolder, logger)
 {
-    protected override async Task<ImmutableList<MeilisearchItem>> GetItems(IReadOnlySet<string> includedTypes)
+    protected override async Task<ImmutableList<MeilisearchItem>> GetItems(
+        IReadOnlySet<string> includedTypes, IReadOnlyCollection<Guid>? ids = null)
     {
         using var context = dbProvider.DbContextFactory!.CreateDbContext();
 
-        var entities = await context.BaseItems
+        var query = context.BaseItems
             .AsNoTracking()
-            .Where(x => x.Type != null && includedTypes.Contains(x.Type))
-            .ToListAsync();
+            .Where(x => x.Type != null && includedTypes.Contains(x.Type));
+
+        if (ids != null)
+        {
+            query = query.Where(x => ids.Contains(x.Id));
+        }
+
+        var entities = await query.ToListAsync();
 
         return entities.Select(ToMeilisearchItem).ToImmutableList();
     }

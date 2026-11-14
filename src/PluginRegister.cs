@@ -14,6 +14,7 @@ public class PluginRegister : IPluginServiceRegistrator
         serviceCollection.AddSingleton<MeilisearchClientHolder>();
         serviceCollection.AddSingleton<Indexer, EfCoreIndexer>();
         serviceCollection.AddHostedService<ItemRemovalQueue>();
+        serviceCollection.AddHostedService<ItemUpdateQueue>();
 
         // Register the Meilisearch search provider with Jellyfin's search infrastructure.
         // Jellyfin discovers ISearchProvider exports via GetExports<ISearchProvider>() and
