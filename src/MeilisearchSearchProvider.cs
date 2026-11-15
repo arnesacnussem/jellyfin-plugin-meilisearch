@@ -18,6 +18,7 @@ namespace Jellyfin.Plugin.Meilisearch;
 /// </summary>
 public class MeilisearchSearchProvider : IExternalSearchProvider
 {
+    private const int DefaultSearchTimeoutSeconds = 5;
     private static readonly string[] PersonSearchAttributes = ["name", "sortName", "originalTitle"];
     private static readonly string PersonTypeKey = TypeHelper.MapTypeKeys([BaseItemKind.Person]).Single();
 
@@ -112,9 +113,30 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
             MatchingStrategy = matchingStrategy,
         };
 
+        // Searches take milliseconds. Without a limit, a Meilisearch that is down or stuck holds every search for the
+        // HTTP client's 100 s default, even when Jellyfin's own search has already answered. The limit stays below that
+        // default, so the timeout reported is always the one that ended the search.
+        var timeoutSeconds = Plugin.Instance?.Configuration.SearchTimeoutSeconds ?? DefaultSearchTimeoutSeconds;
+        if (timeoutSeconds is < 1 or > 60)
+        {
+            timeoutSeconds = DefaultSearchTimeoutSeconds;
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+
         var stopwatch = Stopwatch.StartNew();
-        var result = await index.SearchAsync<MeilisearchSearchHit>(
-            searchTerm, searchQuery, cancellationToken).ConfigureAwait(false);
+        ISearchable<MeilisearchSearchHit> result;
+        try
+        {
+            result = await index.SearchAsync<MeilisearchSearchHit>(
+                searchTerm, searchQuery, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Meilisearch did not answer within {timeoutSeconds} s");
+        }
+
         stopwatch.Stop();
         Plugin.Instance?.UpdateAverageSearchTime(stopwatch.ElapsedMilliseconds);
 
