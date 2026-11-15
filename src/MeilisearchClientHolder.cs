@@ -16,7 +16,10 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         "tags", "studios", "overview", "path", "tagline"
     ];
 
+    private static readonly TimeSpan ReconnectInterval = TimeSpan.FromSeconds(30);
+
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
+    private long _nextReconnectTicks;
     private static readonly HttpClient SwapHttpClient = new();
     private volatile Config? _lastConfiguration;
     private string? _url;
@@ -133,7 +136,7 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         return
         [
             await index.UpdateFilterableAttributesAsync(
-                ["type", "parentId", "isFolder"]
+                ["type", "parentId", "ancestorIds", "isFolder"]
             ),
             await index.UpdateSortableAttributesAsync(
                 ["communityRating", "criticRating"]
@@ -224,9 +227,27 @@ public class MeilisearchClientHolder(ILogger<MeilisearchClientHolder> logger, IS
         }
     }
 
+    /// <summary>
+    /// Starts a reconnect in the background, at most once per <see cref="ReconnectInterval"/>, so callers that
+    /// find the client disconnected can ask for one on every request.
+    /// </summary>
+    public void RequestReconnect(string reason) => _ = TryReconnectInBackground(reason);
+
     private Task TryReconnectInBackground(string reason)
     {
-        if (_lastConfiguration == null)
+        var configuration = _lastConfiguration;
+        if (configuration == null ||
+            (string.IsNullOrEmpty(configuration.Url) &&
+             string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MEILI_URL"))))
+        {
+            return Task.CompletedTask;
+        }
+
+        var now = Environment.TickCount64;
+        var next = Interlocked.Read(ref _nextReconnectTicks);
+        if (now < next ||
+            Interlocked.CompareExchange(
+                ref _nextReconnectTicks, now + (long)ReconnectInterval.TotalMilliseconds, next) != next)
         {
             return Task.CompletedTask;
         }

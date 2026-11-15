@@ -53,10 +53,11 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
         ReloadMeilisearch += (_, _) =>
         {
             logger.LogInformation("Configuration changed, reloading meilisearch...");
-            TryCreateMeilisearchClient().Wait();
+            // Not awaited: saving the configuration should not wait for a full reindex.
+            _ = TryCreateMeilisearchClient();
         };
 
-        hostApplicationLifetime.ApplicationStarted.Register(() => { _ = TryCreateMeilisearchClient(false); });
+        hostApplicationLifetime.ApplicationStarted.Register(() => { _ = TryCreateMeilisearchClient(); });
     }
 
     private EventHandler<BasePluginConfiguration> ReloadMeilisearch { get; }
@@ -96,48 +97,56 @@ public class Plugin : BasePlugin<Config>, IHasWebPages
             ReloadMeilisearch.Invoke(this, configuration);
     }
 
-    private readonly object _updatingTaskLock = new();
-    private Task? _updatingTask;
+    private readonly object _reloadLock = new();
+    private Task? _reloadTask;
+    private bool _reloadPending;
 
-    public async Task TryCreateMeilisearchClient(bool join = true)
+    /// <summary>
+    /// Connects to Meilisearch with the current configuration and reindexes. A request made while a reload is
+    /// running starts one more once it ends, so a configuration saved meanwhile is applied. Errors are logged, not
+    /// thrown.
+    /// </summary>
+    public Task TryCreateMeilisearchClient()
     {
-        Task? task;
-        bool startedNew;
-        lock (_updatingTaskLock)
+        lock (_reloadLock)
         {
-            startedNew = _updatingTask == null;
-            if (startedNew)
+            if (_reloadTask != null)
             {
-                _updatingTask = _TryCreateMeilisearchClient();
+                _reloadPending = true;
+                return _reloadTask;
             }
 
-            task = _updatingTask;
-        }
-
-        if (!startedNew)
-        {
-            _logger.LogWarning("Meilisearch client configuration is still updating，skipping");
-            if (join) await task!;
-            return;
-        }
-
-        try
-        {
-            await task!;
-        }
-        finally
-        {
-            lock (_updatingTaskLock)
-            {
-                _updatingTask = null;
-            }
+            // Task.Run, so the loop cannot finish and clear _reloadTask before it is assigned here.
+            _reloadTask = Task.Run(ReloadLoopAsync);
+            return _reloadTask;
         }
     }
 
-    private async Task _TryCreateMeilisearchClient()
+    private async Task ReloadLoopAsync()
     {
-        await _clientHolder.Set(Configuration);
-        await Indexer.Index();
+        while (true)
+        {
+            try
+            {
+                await _clientHolder.Set(Configuration);
+                await Indexer.Index();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to connect to Meilisearch and reindex");
+            }
+
+            lock (_reloadLock)
+            {
+                if (!_reloadPending)
+                {
+                    _reloadTask = null;
+                    return;
+                }
+
+                _reloadPending = false;
+            }
+        }
     }
 
 

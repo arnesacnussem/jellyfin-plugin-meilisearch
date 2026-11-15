@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Threading.Channels;
 using Meilisearch;
 using Microsoft.Extensions.Logging;
 using Index = Meilisearch.Index;
@@ -28,7 +29,18 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
     private HashSet<string>? _removedDuringReindex;
     private HashSet<Guid>? _updatedDuringReindex;
 
+    // Update tasks Meilisearch has not finished yet, checked one after another by a single background loop.
+    private readonly Channel<(MeilisearchClient Client, int TaskUid, int Count)> _pendingUpdateTasks =
+        Channel.CreateUnbounded<(MeilisearchClient, int, int)>(new UnboundedChannelOptions { SingleReader = true });
+
+    private int _updateTaskCheckerStarted;
+
     public ConcurrentDictionary<string, string> Status { get; } = new();
+
+    /// <summary>
+    /// Whether a full reindex is running or waiting to run.
+    /// </summary>
+    public bool IsIndexing => _indexLock.CurrentCount == 0;
 
     public async Task Index()
     {
@@ -99,7 +111,7 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
                 // Queued, not awaited: Meilisearch applies tasks in order, which is all a later removal needs.
                 // The tasks are checked in the background, so a failed one is still logged.
                 var tasks = await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid");
-                _ = LogFailedTasks(client, tasks, items.Count);
+                CheckUpdateTasks(client, tasks, items.Count);
             }
 
             return items.Count;
@@ -134,18 +146,36 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
         return await task;
     }
 
-    private async Task LogFailedTasks(MeilisearchClient client, IEnumerable<TaskInfo> tasks, int count)
+    /// <summary>
+    /// Queues the tasks for a single background loop that logs the ones that fail. Meilisearch runs tasks in
+    /// order, so waiting on them oldest first keeps one request polling at a time, however many are pending.
+    /// </summary>
+    private void CheckUpdateTasks(MeilisearchClient client, IEnumerable<TaskInfo> tasks, int count)
     {
-        try
+        foreach (var task in tasks)
         {
-            foreach (var task in tasks)
-            {
-                await WaitForTask(client, task);
-            }
+            _pendingUpdateTasks.Writer.TryWrite((client, task.TaskUid, count));
         }
-        catch (Exception e)
+
+        if (Interlocked.Exchange(ref _updateTaskCheckerStarted, 1) == 0)
         {
-            logger.LogWarning(e, "Meilisearch did not apply the update of {COUNT} items", count);
+            _ = Task.Run(CheckUpdateTasksAsync);
+        }
+    }
+
+    private async Task CheckUpdateTasksAsync()
+    {
+        await foreach (var (client, taskUid, count) in _pendingUpdateTasks.Reader.ReadAllAsync())
+        {
+            try
+            {
+                await WaitForTask(client, taskUid);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Meilisearch did not apply, or did not confirm, the update of {COUNT} items",
+                    count);
+            }
         }
     }
 
@@ -190,13 +220,9 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
 
         try
         {
+            // An empty read goes through the same check as any other: the first one only adds (nothing), and a
+            // second one in a row rebuilds, which empties the index after every library is removed.
             var items = await GetItems(TypeHelper.TypeFullNames);
-
-            if (items.Count <= 0)
-            {
-                logger.LogInformation("No items to index");
-                return;
-            }
 
             var previousCount = Plugin.Instance?.Configuration.LastIndexedItemCount ?? 0;
             SaveLastIndexedItemCount(items.Count);

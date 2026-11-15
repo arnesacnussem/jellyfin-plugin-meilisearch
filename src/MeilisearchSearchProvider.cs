@@ -46,8 +46,17 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
     public int Priority => 10; // Lower number = higher priority; runs before the built-in SQL provider (100)
 
     /// <inheritdoc />
-    public bool CanSearch(SearchProviderQuery query) =>
-        _clientHolder.Ok && Environment.TickCount64 >= Interlocked.Read(ref _pausedUntilTicks);
+    public bool CanSearch(SearchProviderQuery query)
+    {
+        if (!_clientHolder.Ok)
+        {
+            // Nothing else reconnects while the library is quiet, so searches ask for it.
+            _clientHolder.RequestReconnect("search while disconnected");
+            return false;
+        }
+
+        return Environment.TickCount64 >= Interlocked.Read(ref _pausedUntilTicks);
+    }
 
     /// <inheritdoc />
     public async IAsyncEnumerable<SearchResult> SearchAsync(
@@ -203,7 +212,8 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
 
         if (query.ParentId.HasValue && query.ParentId.Value != Guid.Empty)
         {
-            parts.Add($"parentId = \"{query.ParentId.Value}\"");
+            // The whole subtree, not only direct children: an episode is under its season, series and library.
+            parts.Add($"ancestorIds = \"{query.ParentId.Value}\"");
         }
 
         return parts.Count == 0 ? null : string.Join(" AND ", parts);

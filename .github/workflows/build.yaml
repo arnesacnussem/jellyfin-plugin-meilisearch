@@ -1,6 +1,10 @@
 name: '🔨 Build Plugin'
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
     inputs:
       dotnet-version:
@@ -26,13 +30,14 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
-          dotnet-version: "${{ inputs.dotnet-version }}"
+          # inputs are empty outside workflow_dispatch, so the defaults are repeated here.
+          dotnet-version: "${{ inputs.dotnet-version || '10.0.x' }}"
 
       - name: Build Jellyfin Plugin
         uses: oddstr13/jellyfin-plugin-repository-manager@9497a0a499416cc572ed2e07a391d9f943a37b4d # v1.1.1
         id: jprm
         with:
-          dotnet-target: "${{ inputs.dotnet-target }}"
+          dotnet-target: "${{ inputs.dotnet-target || 'net10.0' }}"
           path: './src'
           output: './artifacts'
 
