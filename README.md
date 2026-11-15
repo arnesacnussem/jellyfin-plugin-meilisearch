@@ -88,6 +88,7 @@ Index will update on following events:
 Each of these rebuilds the index: the plugin writes all items into a temporary `<index>_rebuild` index, swaps it with
 the live one and deletes the old documents, so items removed from Jellyfin do not stay in search. Items removed between
 reindexes, such as Live TV programmes replaced by a guide refresh, are deleted from the index within a few seconds.
+Items added or updated between reindexes, such as a newly imported episode, are indexed within a few seconds too.
 If the API key is not the master key, it needs the `indexes.create`, `indexes.delete` and `indexes.swap` actions in
 addition to document access.
 
