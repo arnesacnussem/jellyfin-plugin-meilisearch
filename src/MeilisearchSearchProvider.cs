@@ -18,12 +18,15 @@ namespace Jellyfin.Plugin.Meilisearch;
 /// </summary>
 public class MeilisearchSearchProvider : IExternalSearchProvider
 {
-    private const int DefaultSearchTimeoutSeconds = 5;
+    // After a timeout, searches skip Meilisearch for this long, so an outage costs one slow search per pause
+    // instead of every search waiting for the full timeout.
+    private static readonly TimeSpan TimeoutPause = TimeSpan.FromSeconds(30);
     private static readonly string[] PersonSearchAttributes = ["name", "sortName", "originalTitle"];
     private static readonly string PersonTypeKey = TypeHelper.MapTypeKeys([BaseItemKind.Person]).Single();
 
     private readonly MeilisearchClientHolder _clientHolder;
     private readonly ILogger<MeilisearchSearchProvider> _logger;
+    private long _pausedUntilTicks;
 
     public MeilisearchSearchProvider(
         MeilisearchClientHolder clientHolder,
@@ -43,14 +46,15 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
     public int Priority => 10; // Lower number = higher priority; runs before the built-in SQL provider (100)
 
     /// <inheritdoc />
-    public bool CanSearch(SearchProviderQuery query) => _clientHolder.Ok;
+    public bool CanSearch(SearchProviderQuery query) =>
+        _clientHolder.Ok && Environment.TickCount64 >= Interlocked.Read(ref _pausedUntilTicks);
 
     /// <inheritdoc />
     public async IAsyncEnumerable<SearchResult> SearchAsync(
         SearchProviderQuery query,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (!_clientHolder.Ok || _clientHolder.Index is null)
+        if (!CanSearch(query) || _clientHolder.Index is null)
         {
             yield break;
         }
@@ -67,6 +71,20 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
             results = await SearchInternalAsync(
                 query.SearchTerm, limit, filter, attributesToSearchOn, matchingStrategy, cancellationToken)
                 .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (TimeoutException ex)
+        {
+            Interlocked.Exchange(ref _pausedUntilTicks, Environment.TickCount64 + (long)TimeoutPause.TotalMilliseconds);
+            _logger.LogError(
+                ex,
+                "Meilisearch search timed out for term '{SearchTerm}'; skipping Meilisearch for {Pause} s",
+                query.SearchTerm,
+                TimeoutPause.TotalSeconds);
+            yield break;
         }
         catch (Exception ex)
         {
@@ -116,11 +134,8 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
         // Searches take milliseconds. Without a limit, a Meilisearch that is down or stuck holds every search for the
         // HTTP client's 100 s default, even when Jellyfin's own search has already answered. The limit stays below that
         // default, so the timeout reported is always the one that ended the search.
-        var timeoutSeconds = Plugin.Instance?.Configuration.SearchTimeoutSeconds ?? DefaultSearchTimeoutSeconds;
-        if (timeoutSeconds is < 1 or > 60)
-        {
-            timeoutSeconds = DefaultSearchTimeoutSeconds;
-        }
+        var timeoutSeconds = Plugin.Instance?.Configuration.GetEffectiveSearchTimeoutSeconds()
+                             ?? Config.DefaultSearchTimeoutSeconds;
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
@@ -132,13 +147,21 @@ public class MeilisearchSearchProvider : IExternalSearchProvider
             result = await index.SearchAsync<MeilisearchSearchHit>(
                 searchTerm, searchQuery, timeout.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex)
+            when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new TimeoutException($"Meilisearch did not answer within {timeoutSeconds} s");
+            throw new TimeoutException($"Meilisearch did not answer within {timeoutSeconds} s", ex);
         }
-
-        stopwatch.Stop();
-        Plugin.Instance?.UpdateAverageSearchTime(stopwatch.ElapsedMilliseconds);
+        finally
+        {
+            // Failed and timed-out searches count too, so the average shows an outage. Searches the caller
+            // cancelled are left out, since their time says nothing about Meilisearch.
+            stopwatch.Stop();
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                Plugin.Instance?.UpdateAverageSearchTime(stopwatch.ElapsedMilliseconds);
+            }
+        }
 
         var results = new List<(Guid, float)>(result.Hits.Count);
         foreach (var hit in result.Hits)

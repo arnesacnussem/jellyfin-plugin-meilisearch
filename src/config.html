@@ -103,7 +103,7 @@
                 </div>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="SearchTimeoutSeconds">Search timeout (seconds)</label>
-                    <input id="SearchTimeoutSeconds" is="emby-input" name="SearchTimeoutSeconds" type="number" min="1" max="60" step="1"/>
+                    <input id="SearchTimeoutSeconds" is="emby-input" name="SearchTimeoutSeconds" type="number" min="1" max="60" step="1" required/>
                     <div class="fieldDescription">
                         A search that takes longer counts as failed, so Jellyfin answers from its own database instead.
                         Searches normally take milliseconds. 1 to 60 seconds, default 5.
@@ -178,7 +178,7 @@
                         document.querySelector('#IndexName').value = config.IndexName;
                         document.querySelector('#MatchingStrategy').value = config.MatchingStrategy || 'last';
                         document.querySelector('#SearchPeopleByNameOnly').checked = config.SearchPeopleByNameOnly;
-                        document.querySelector('#SearchTimeoutSeconds').value = config.SearchTimeoutSeconds ?? 5;
+                        document.querySelector('#SearchTimeoutSeconds').value = config.SearchTimeoutSeconds;
                         Dashboard.hideLoadingMsg();
                     });
                     updateStatus('status');
@@ -194,8 +194,9 @@
                         config.IndexName = document.querySelector('#IndexName').value;
                         config.MatchingStrategy = document.querySelector('#MatchingStrategy').value;
                         config.SearchPeopleByNameOnly = document.querySelector('#SearchPeopleByNameOnly').checked;
-                        const timeout = parseInt(document.querySelector('#SearchTimeoutSeconds').value, 10);
-                        config.SearchTimeoutSeconds = timeout >= 1 && timeout <= 60 ? timeout : 5;
+                        // The input's min, max, step and required stop the form from submitting a value out of range,
+                        // and the browser tells the admin why.
+                        config.SearchTimeoutSeconds = parseInt(document.querySelector('#SearchTimeoutSeconds').value, 10);
                         ApiClient.updatePluginConfiguration(id, config).then(result => {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });

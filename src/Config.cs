@@ -4,6 +4,10 @@ namespace Jellyfin.Plugin.Meilisearch;
 
 public class Config : BasePluginConfiguration
 {
+    public const int DefaultSearchTimeoutSeconds = 5;
+    public const int MinSearchTimeoutSeconds = 1;
+    public const int MaxSearchTimeoutSeconds = 60;
+
     public Config()
     {
         ApiKey = string.Empty;
@@ -12,7 +16,7 @@ public class Config : BasePluginConfiguration
         IndexName = string.Empty;
         MatchingStrategy = "last";
         SearchPeopleByNameOnly = false;
-        SearchTimeoutSeconds = 5;
+        SearchTimeoutSeconds = DefaultSearchTimeoutSeconds;
     }
 
     public string ApiKey { get; set; }
@@ -36,6 +40,14 @@ public class Config : BasePluginConfiguration
     /// 1 to 60. Other values use the default of 5.
     /// </summary>
     public int SearchTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// <see cref="SearchTimeoutSeconds"/> if it is in range, otherwise <see cref="DefaultSearchTimeoutSeconds"/>.
+    /// </summary>
+    public int GetEffectiveSearchTimeoutSeconds() =>
+        SearchTimeoutSeconds is >= MinSearchTimeoutSeconds and <= MaxSearchTimeoutSeconds
+            ? SearchTimeoutSeconds
+            : DefaultSearchTimeoutSeconds;
 
     /// <summary>
     /// Number of items read from the database by the last full reindex. Not shown on the config page.
