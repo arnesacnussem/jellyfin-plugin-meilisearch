@@ -4,6 +4,7 @@ public record MeilisearchItem(
     string Guid,
     string? Type,
     string? ParentId,
+    string[] AncestorIds,
     string? Name,
     string? Overview,
     string? OriginalTitle,

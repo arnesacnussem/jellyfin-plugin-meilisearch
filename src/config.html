@@ -135,7 +135,8 @@
             const reindexBtn = document.querySelector('#meilisearch-reindex-button')
             const clsNameEnabled = 'raised button-submit block formDialogFooterItem emby-button';
             const clsNameDisabled = 'block formDialogFooterItem emby-button';
-            const updateStatus = (endpoint) => {
+            // reconnect and reindex change state, so they are POSTs; both start the work and return at once.
+            const updateStatus = (endpoint, method = 'GET') => {
                 btn.setAttribute('disabled', 'disabled');
                 reconnectBtn.setAttribute('disabled', 'disabled');
                 reindexBtn.setAttribute('disabled', 'disabled');
@@ -144,7 +145,11 @@
                 reindexBtn.className = clsNameDisabled;
 
                 statusEl.innerText = 'loading status...';
-                ApiClient.getJSON(ApiClient.getUrl('meilisearch/' + endpoint)).then(status => {
+                ApiClient.ajax({
+                    type: method,
+                    url: ApiClient.getUrl('meilisearch/' + endpoint),
+                    dataType: 'json'
+                }).then(status => {
                     statusEl.innerText = JSON.stringify(status, null, 2);
                     if (status.meilisearchOk) {
                         reconnectBtn.style.display = 'none';
@@ -164,8 +169,8 @@
                 })
             }
             btn.addEventListener('click', () => updateStatus('status'));
-            reconnectBtn.addEventListener('click', () => updateStatus('reconnect'));
-            reindexBtn.addEventListener('click', () => updateStatus('reindex'));
+            reconnectBtn.addEventListener('click', () => updateStatus('reconnect', 'POST'));
+            reindexBtn.addEventListener('click', () => updateStatus('reindex', 'POST'));
 
 
             document.querySelector('#MeilisearchConfigPage')
