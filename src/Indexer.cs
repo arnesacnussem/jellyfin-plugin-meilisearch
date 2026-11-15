@@ -66,19 +66,11 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
             _removedDuringReindex?.UnionWith(ids);
         }
 
-        await _changeLock.WaitAsync();
-        try
+        await RunChange(async (_, index) =>
         {
-            var task = clientHolder.Call(async (_, index) => { await index.DeleteDocumentsAsync(ids); });
-            if (task != null)
-            {
-                await task;
-            }
-        }
-        finally
-        {
-            _changeLock.Release();
-        }
+            await index.DeleteDocumentsAsync(ids);
+            return true;
+        });
     }
 
     /// <summary>
@@ -99,25 +91,61 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
             _updatedDuringReindex?.UnionWith(ids);
         }
 
-        await _changeLock.WaitAsync();
+        return await RunChange(async (client, index) =>
+        {
+            var items = await GetItems(TypeHelper.TypeFullNames, ids);
+            if (items.Count > 0)
+            {
+                // Queued, not awaited: Meilisearch applies tasks in order, which is all a later removal needs.
+                // The tasks are checked in the background, so a failed one is still logged.
+                var tasks = await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid");
+                _ = LogFailedTasks(client, tasks, items.Count);
+            }
+
+            return items.Count;
+        });
+    }
+
+    /// <summary>
+    /// Runs one update or removal. They take turns, and the turn is taken inside the call, so a reconnect after
+    /// a failed request does not hold up the other changes.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Meilisearch is not connected.</exception>
+    private async Task<T> RunChange<T>(Func<MeilisearchClient, Index, Task<T>> change)
+    {
+        var task = clientHolder.Call(async (client, index) =>
+        {
+            await _changeLock.WaitAsync();
+            try
+            {
+                return await change(client, index);
+            }
+            finally
+            {
+                _changeLock.Release();
+            }
+        });
+
+        if (task == null)
+        {
+            throw new InvalidOperationException("Meilisearch is not connected");
+        }
+
+        return await task;
+    }
+
+    private async Task LogFailedTasks(MeilisearchClient client, IEnumerable<TaskInfo> tasks, int count)
+    {
         try
         {
-            var task = clientHolder.Call(async (_, index) =>
+            foreach (var task in tasks)
             {
-                var items = await GetItems(TypeHelper.TypeFullNames, ids);
-                if (items.Count > 0)
-                {
-                    // Queued, not awaited: Meilisearch applies tasks in order, which is all a later removal needs.
-                    await index.AddDocumentsInBatchesAsync(items, batchSize: BatchSize, primaryKey: "guid");
-                }
-
-                return items.Count;
-            });
-            return task == null ? 0 : await task;
+                await WaitForTask(client, task);
+            }
         }
-        finally
+        catch (Exception e)
         {
-            _changeLock.Release();
+            logger.LogWarning(e, "Meilisearch did not apply the update of {COUNT} items", count);
         }
     }
 
@@ -201,7 +229,8 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
                 }
             }
 
-            // Items changed after the database read went into the old index, which the rebuild replaced.
+            // Items changed after the database read went into the old index, which the rebuild replaced, or were
+            // overwritten by the older documents from the read.
             Guid[] updated;
             lock (_reindexChangesLock)
             {
@@ -211,10 +240,20 @@ public abstract class Indexer(MeilisearchClientHolder clientHolder, ILogger<Inde
 
             if (updated.Length > 0)
             {
-                var changedItems = await GetItems(TypeHelper.TypeFullNames, updated);
-                if (changedItems.Count > 0)
+                try
                 {
-                    await AddDocuments(meilisearchClient, index, changedItems);
+                    var changedItems = await GetItems(TypeHelper.TypeFullNames, updated);
+                    if (changedItems.Count > 0)
+                    {
+                        await AddDocuments(meilisearchClient, index, changedItems);
+                    }
+                }
+                catch (Exception e)
+                {
+                    // The removals below must still be applied, or deleted items come back with this reindex.
+                    logger.LogWarning(e,
+                        "Failed to apply {COUNT} updates made during the reindex; they wait for the next one",
+                        updated.Length);
                 }
             }
 
